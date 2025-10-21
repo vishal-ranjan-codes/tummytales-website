@@ -5,17 +5,17 @@ import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import HeaderLogo from "./HeaderLogo"
-import HeaderMenuDropdown from './HeaderMenuDropdown'
+// import HeaderMenuDropdown from './HeaderMenuDropdown'
 import { Button } from '@/components/ui/button'
 
 // Define rules for transparent headers
-const transparentRules = [
+const transparentRules: Array<{ path: string; exact?: boolean; include?: string[]; exclude?: string[] }> = [
   { path: '/', exact: true },
   { path: '/about', exact: true },
 ]
 
 // Define rules for full-width headers
-const fullWidthRules = [
+const fullWidthRules: Array<{ path: string; exact?: boolean; include?: string[]; exclude?: string[] }> = [
   // No full-width headers needed for Tummy Tales
 ]
 
