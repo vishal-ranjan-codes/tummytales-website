@@ -1,6 +1,4 @@
 import { Button } from "@/components/ui/button";
-import Image from "next/image"
-import Link from "next/link";
 import { Utensils, Clock, Truck, Star, Shield, Smartphone, Users, Heart } from "lucide-react";
 
 export default function Home() {
@@ -93,7 +91,7 @@ export default function Home() {
                 <Utensils className="w-6 h-6 text-green-600" />
               </div>
               <h3 className="text-xl mb-3 theme-fc-base">Affordable</h3>
-              <p className="text-fc-light max-sm:text-sm">Get quality home-cooked meals at prices that won't break your budget. Save money compared to restaurants.</p>
+              <p className="text-fc-light max-sm:text-sm">Get quality home-cooked meals at prices that won&apos;t break your budget. Save money compared to restaurants.</p>
             </div>
 
             <div className="box p-8 text-center">
@@ -148,7 +146,7 @@ export default function Home() {
                 <Clock className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-semibold mb-2 text-white">Flexible Hours</h3>
-              <p className="text-white-opacity-80">Work on your own schedule. Cook when it's convenient for you and your family.</p>
+              <p className="text-white-opacity-80">Work on your own schedule. Cook when it&apos;s convenient for you and your family.</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-white-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -186,7 +184,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl mb-3 theme-fc-base">Flexible Work</h3>
               <p className="text-fc-light max-sm:text-sm">Choose your own hours and delivery areas. Work part-time or full-time based on your availability.</p>
-            </div>
+              </div>
 
             <div className="box p-8 text-center">
               <div className="w-12 h-12 bg-green-100 rounded-lg mb-4 flex items-center justify-center mx-auto">
@@ -223,34 +221,34 @@ export default function Home() {
             <p className="text-center max-sm:text-sm theme-fc-light container-max-tab">
               Everything you need for a seamless tiffin subscription experience. Built for consumers, vendors, and riders.
             </p>
-          </div>
+              </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="box p-8">
+              <div className="box p-8">
               <div className="w-12 h-12 bg-primary-100 rounded-lg mb-4 flex items-center justify-center">
                 <Smartphone className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl mb-3 theme-fc-base">Easy Subscription Management</h3>
               <p className="text-fc-light max-sm:text-sm">Manage your subscriptions, pause or skip meals, and customize your orders with just a few taps.</p>
-            </div>
+              </div>
 
-            <div className="box p-8">
+              <div className="box p-8">
               <div className="w-12 h-12 bg-primary-100 rounded-lg mb-4 flex items-center justify-center">
                 <Truck className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl mb-3 theme-fc-base">Real-time Tracking</h3>
               <p className="text-fc-light max-sm:text-sm">Track your orders from kitchen to doorstep. Get live updates on preparation and delivery status.</p>
-            </div>
+              </div>
 
-            <div className="box p-8">
+              <div className="box p-8">
               <div className="w-12 h-12 bg-primary-100 rounded-lg mb-4 flex items-center justify-center">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl mb-3 theme-fc-base">Multiple Payment Options</h3>
               <p className="text-fc-light max-sm:text-sm">Pay with cards, UPI, wallets, or cash on delivery. Secure payment processing for peace of mind.</p>
-            </div>
+              </div>
 
-            <div className="box p-8">
+              <div className="box p-8">
               <div className="w-12 h-12 bg-primary-100 rounded-lg mb-4 flex items-center justify-center">
                 <Star className="w-6 h-6 text-white" />
               </div>
@@ -270,7 +268,7 @@ export default function Home() {
               Ready to Transform Your Mealtime?
             </h2>
             <p className='mb-3 theme-fc-light max-sm:text-sm container-max-tab'>
-              Join thousands of satisfied customers who've discovered the joy of home-cooked meals delivered daily. Whether you're a hungry customer, aspiring vendor, or delivery partner, Tummy Tales has something for everyone.
+              Join thousands of satisfied customers who&apos;ve discovered the joy of home-cooked meals delivered daily. Whether you&apos;re a hungry customer, aspiring vendor, or delivery partner, Tummy Tales has something for everyone.
             </p>
           </div>
 
