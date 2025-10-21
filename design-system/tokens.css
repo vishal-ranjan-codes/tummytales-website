@@ -1,0 +1,201 @@
+/**
+ * =============================================================================
+ * DESIGN SYSTEM - Design Tokens
+ * =============================================================================
+ * 
+ * This file contains all design tokens for the design system.
+ * Copy this file to your project and customize the color values for your brand.
+ * 
+ * Framework: Tailwind CSS v4.1.4
+ * Dark Mode: Class-based (.dark)
+ * Color System: CSS Custom Properties with --dark suffix pattern
+ * =============================================================================
+ */
+
+@theme {
+  /* ========================================================================
+     DESIGN TOKENS - LIGHT THEME
+     ======================================================================== */
+  
+  /* ------------------------------------------------------------------------ 
+     Primary Brand Colors
+     Base: #E9723D (Warm Orange)
+     Usage: CTAs, links, focus states, brand accents
+     ------------------------------------------------------------------------ */
+  --color-primary-100: #E9723D;      /* Full opacity - Primary buttons */
+  --color-primary-75: #E9723Dbf;     /* 75% opacity - Hover states */
+  --color-primary-50: #E9723D80;     /* 50% opacity - Disabled states */
+  --color-primary-25: #E9723D40;     /* 25% opacity - Subtle backgrounds */
+  --color-primary-12: #E9723D1f;     /* 12% opacity - Accent backgrounds */
+  --color-primary-08: #E9723D14;     /* 8% opacity - Hover backgrounds */
+  --color-primary-05: #E9723D0d;     /* 5% opacity - Very subtle tints */
+
+  /* ------------------------------------------------------------------------ 
+     Typography Colors (fc = font-color)
+     Usage: Text hierarchy and readability
+     ------------------------------------------------------------------------ */
+  --color-fc-heading: #262626;       /* Primary headings - highest contrast */
+  --color-fc-heading-light: #363636; /* Secondary headings */
+  --color-fc-base: #4D4D4D;          /* Body text - optimal readability */
+  --color-fc-light: #8C8C8C;         /* Muted text - labels, captions */
+  --color-fc-lighter: #BFBFBF;       /* Placeholder text, disabled text */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Backgrounds
+     Usage: Page and section backgrounds
+     ------------------------------------------------------------------------ */
+  --color-layout-background: #F5F5F5;      /* Page background */
+  --color-layout-background-dark: #eeeeee; /* Darker background sections */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Foregrounds
+     Usage: Cards, panels, elevated surfaces
+     ------------------------------------------------------------------------ */
+  --color-layout-foreground: #fff;         /* Cards, modals, dropdowns */
+  --color-layout-foreground-dark: #FAFAFA; /* Subtle card variations */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Borders
+     Usage: Dividers, outlines, separators
+     ------------------------------------------------------------------------ */
+  --color-layout-border: #dfdfdf;          /* Standard borders */
+  --color-layout-border-light: #F0F0F0;    /* Subtle dividers */
+
+
+  /* ========================================================================
+     DESIGN TOKENS - DARK THEME
+     Suffix: --dark (automatically applied when .dark class is present)
+     Theme: Warm orange-brown with high contrast
+     ======================================================================== */
+  
+  /* ------------------------------------------------------------------------ 
+     Primary Brand Colors (Dark Mode)
+     Base: #FF8C4D (Brighter orange for dark backgrounds)
+     ------------------------------------------------------------------------ */
+  --color-primary-100--dark: #FF8C4D;
+  --color-primary-75--dark: #FF8C4Dbf;
+  --color-primary-50--dark: #FF8C4D80;
+  --color-primary-25--dark: #FF8C4D40;
+  --color-primary-12--dark: #FF8C4D1f;
+  --color-primary-08--dark: #FF8C4D14;
+  --color-primary-05--dark: #FF8C4D0d;
+
+  /* ------------------------------------------------------------------------ 
+     Typography Colors (Dark Mode)
+     Warm cream and tan colors for comfortable reading
+     ------------------------------------------------------------------------ */
+  --color-fc-heading--dark: #F5E6D3;       /* Warm cream - headings */
+  --color-fc-heading-light--dark: #E8D4BD; /* Secondary headings */
+  --color-fc-base--dark: #D4B5A0;          /* Warm tan - body text */
+  --color-fc-light--dark: #B8937A;         /* Muted tan - labels */
+  --color-fc-lighter--dark: #8C6F5C;       /* Placeholder text */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Backgrounds (Dark Mode)
+     Deep warm browns creating cozy atmosphere
+     ------------------------------------------------------------------------ */
+  --color-layout-background--dark: #1A0F08;      /* Deep warm brown */
+  --color-layout-background-dark--dark: #0F0805; /* Darker sections */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Foregrounds (Dark Mode)
+     Warm brown cards and panels
+     ------------------------------------------------------------------------ */
+  --color-layout-foreground--dark: #2D1810;      /* Card background */
+  --color-layout-foreground-dark--dark: #3D2418; /* Elevated cards */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Borders (Dark Mode)
+     Warm brown borders maintaining hierarchy
+     ------------------------------------------------------------------------ */
+  --color-layout-border--dark: #5C3D2E;          /* Standard borders */
+  --color-layout-border-light--dark: #4A3025;    /* Subtle dividers */
+
+
+  /* ========================================================================
+     SPECIAL PURPOSE COLORS
+     ======================================================================== */
+  
+  /* Gradient for primary CTA buttons */
+  --color-primary-btn-gradient: linear-gradient(230deg, #D2691E 15%, #FF8C4D 100%);
+
+  /* Additional theme colors (can be customized per project) */
+  --color-theme-bg-dark: #EA5A36;
+  --color-theme-bg-darker: #D24B3E;
+  --color-theme-fg-dark: #185B50;
+  --color-layout-fg-darker: #114f45;
+
+
+  /* ========================================================================
+     OPACITY UTILITIES
+     White and black overlays for layering effects
+     ======================================================================== */
+  
+  /* White opacity variants (for dark backgrounds) */
+  --color-white-opacity-03: rgb(255 255 255 / 3%);
+  --color-white-opacity-05: rgb(255 255 255 / 5%);
+  --color-white-opacity-10: rgb(255 255 255 / 10%);
+  --color-white-opacity-20: rgb(255 255 255 / 20%);
+  --color-white-opacity-30: rgb(255 255 255 / 30%);
+  --color-white-opacity-40: rgb(255 255 255 / 40%);
+  --color-white-opacity-50: rgb(255 255 255 / 50%);
+  --color-white-opacity-60: rgb(255 255 255 / 60%);
+  --color-white-opacity-70: rgb(255 255 255 / 70%);
+  --color-white-opacity-80: rgb(255 255 255 / 80%);
+  --color-white-opacity-90: rgb(255 255 255 / 90%);
+  --color-white-opacity-100: rgb(255 255 255 / 100%);
+
+  /* Black opacity variants (for light backgrounds) */
+  --color-black-opacity-03: rgb(0 0 0 / 3%);
+  --color-black-opacity-05: rgb(0 0 0 / 5%);
+  --color-black-opacity-10: rgb(0 0 0 / 10%);
+  --color-black-opacity-20: rgb(0 0 0 / 20%);
+  --color-black-opacity-30: rgb(0 0 0 / 30%);
+  --color-black-opacity-40: rgb(0 0 0 / 40%);
+  --color-black-opacity-50: rgb(0 0 0 / 50%);
+  --color-black-opacity-60: rgb(0 0 0 / 60%);
+  --color-black-opacity-70: rgb(0 0 0 / 70%);
+  --color-black-opacity-80: rgb(0 0 0 / 80%);
+  --color-black-opacity-90: rgb(0 0 0 / 90%);
+  --color-black-opacity-100: rgb(0 0 0 / 100%);
+
+
+  /* ========================================================================
+     SHADCN/UI COMPATIBILITY LAYER
+     Maps custom tokens to shadcn component expectations
+     Automatically switches between light/dark via utility classes
+     ======================================================================== */
+  
+  --color-background: var(--color-layout-background);
+  --color-foreground: var(--color-fc-heading);
+  --color-card: var(--color-layout-foreground);
+  --color-card-foreground: var(--color-fc-heading);
+  --color-popover: var(--color-layout-foreground);
+  --color-popover-foreground: var(--color-fc-heading);
+  --color-primary: var(--color-primary-100);
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: var(--color-layout-background-dark);
+  --color-secondary-foreground: var(--color-fc-heading);
+  --color-muted: var(--color-layout-background-dark);
+  --color-muted-foreground: var(--color-fc-light);
+  --color-accent: var(--color-primary-12);
+  --color-accent-foreground: var(--color-fc-heading);
+  --color-destructive: #DC2626;
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: var(--color-layout-border);
+  --color-input: var(--color-layout-border);
+  --color-ring: var(--color-primary-50);
+
+
+  /* ========================================================================
+     TYPOGRAPHY SCALE
+     Consistent text sizing across the design system
+     ======================================================================== */
+  
+  --text-h1: 2rem;       /* 32px - Page titles */
+  --text-h2: 1.75rem;    /* 28px - Section headings */
+  --text-h3: 1.5rem;     /* 24px - Subsection headings */
+  --text-h4: 1.25rem;    /* 20px - Card headings */
+  --text-h5: 1rem;       /* 16px - Small headings */
+  --text-h6: 0.875rem;   /* 14px - Overline text */
+}

@@ -1,0 +1,856 @@
+/**
+ * =============================================================================
+ * DESIGN SYSTEM - Globals Stylesheet
+ * =============================================================================
+ * 
+ * Framework: Tailwind CSS v4.1.4
+ * Dark Mode: Class-based (.dark)
+ * Color System: CSS Custom Properties with --dark suffix pattern
+ * 
+ * STRUCTURE:
+ * 1. Tailwind Import & Configuration
+ * 2. Design Tokens (@theme)
+ * 3. Custom Utility Classes
+ * 4. Component Base Styles
+ * 5. Layout & Page Styles
+ * 
+ * USAGE IN OTHER PROJECTS:
+ * - Copy @theme block for design tokens
+ * - Copy @utility blocks for reusable patterns
+ * - Update color values to match brand
+ * - Adjust typography scale as needed
+ * =============================================================================
+ */
+
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ========================================================================
+   LAYOUT CONFIGURATION
+   Global layout variables used throughout the design system
+   ======================================================================== */
+:root {
+  --header-height: 80px;
+  --theme-rounded: 10px;
+  --theme-rounded-sm: 6px;
+}
+
+@theme {
+  /* ========================================================================
+     DESIGN TOKENS - LIGHT THEME
+     ======================================================================== */
+  
+  /* ------------------------------------------------------------------------ 
+     Primary Brand Colors
+     Base: #E9723D (Warm Orange)
+     Usage: CTAs, links, focus states, brand accents
+     ------------------------------------------------------------------------ */
+  --color-primary-100: #E9723D;      /* Full opacity - Primary buttons */
+  --color-primary-75: #E9723Dbf;     /* 75% opacity - Hover states */
+  --color-primary-50: #E9723D80;     /* 50% opacity - Disabled states */
+  --color-primary-25: #E9723D40;     /* 25% opacity - Subtle backgrounds */
+  --color-primary-12: #E9723D1f;     /* 12% opacity - Accent backgrounds */
+  --color-primary-08: #E9723D14;     /* 8% opacity - Hover backgrounds */
+  --color-primary-05: #E9723D0d;     /* 5% opacity - Very subtle tints */
+
+  /* ------------------------------------------------------------------------ 
+     Typography Colors (fc = font-color)
+     Usage: Text hierarchy and readability
+     ------------------------------------------------------------------------ */
+  --color-fc-heading: #262626;       /* Primary headings - highest contrast */
+  --color-fc-heading-light: #363636; /* Secondary headings */
+  --color-fc-base: #4D4D4D;          /* Body text - optimal readability */
+  --color-fc-light: #8C8C8C;         /* Muted text - labels, captions */
+  --color-fc-lighter: #BFBFBF;       /* Placeholder text, disabled text */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Backgrounds
+     Usage: Page and section backgrounds
+     ------------------------------------------------------------------------ */
+  --color-layout-background: #F5F5F5;      /* Page background */
+  --color-layout-background-dark: #eeeeee; /* Darker background sections */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Foregrounds
+     Usage: Cards, panels, elevated surfaces
+     ------------------------------------------------------------------------ */
+  --color-layout-foreground: #fff;         /* Cards, modals, dropdowns */
+  --color-layout-foreground-dark: #FAFAFA; /* Subtle card variations */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Borders
+     Usage: Dividers, outlines, separators
+     ------------------------------------------------------------------------ */
+  --color-layout-border: #dfdfdf;          /* Standard borders */
+  --color-layout-border-light: #F0F0F0;    /* Subtle dividers */
+
+
+  /* ========================================================================
+     DESIGN TOKENS - DARK THEME
+     Suffix: --dark (automatically applied when .dark class is present)
+     Theme: Warm orange-brown with high contrast
+     ======================================================================== */
+  
+  /* ------------------------------------------------------------------------ 
+     Primary Brand Colors (Dark Mode)
+     Base: #FF8C4D (Brighter orange for dark backgrounds)
+     ------------------------------------------------------------------------ */
+  --color-primary-100--dark: #FF8C4D;
+  --color-primary-75--dark: #FF8C4Dbf;
+  --color-primary-50--dark: #FF8C4D80;
+  --color-primary-25--dark: #FF8C4D40;
+  --color-primary-12--dark: #FF8C4D1f;
+  --color-primary-08--dark: #FF8C4D14;
+  --color-primary-05--dark: #FF8C4D0d;
+
+  /* ------------------------------------------------------------------------ 
+     Typography Colors (Dark Mode)
+     Warm cream and tan colors for comfortable reading
+     ------------------------------------------------------------------------ */
+  --color-fc-heading--dark: #fffffffa;       /* Warm cream - headings */
+  --color-fc-heading-light--dark: #ffffffeb; /* Secondary headings */
+  --color-fc-base--dark: #ffffffcc;          /* Warm tan - body text */
+  --color-fc-light--dark: #ffffffb8;         /* Muted tan - labels */
+  --color-fc-lighter--dark: #ffffffad;       /* Placeholder text */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Backgrounds (Dark Mode)
+     Deep warm browns creating cozy atmosphere
+     ------------------------------------------------------------------------ */
+  --color-layout-background--dark: #1A0F08;      /* Deep warm brown */
+  --color-layout-background-dark--dark: #0F0805; /* Darker sections */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Foregrounds (Dark Mode)
+     Warm brown cards and panels
+     ------------------------------------------------------------------------ */
+  --color-layout-foreground--dark: #2D1810;      /* Card background */
+  --color-layout-foreground-dark--dark: #3D2418; /* Elevated cards */
+
+  /* ------------------------------------------------------------------------ 
+     Layout Colors - Borders (Dark Mode)
+     Warm brown borders maintaining hierarchy
+     ------------------------------------------------------------------------ */
+  --color-layout-border--dark: #5C3D2E;          /* Standard borders */
+  --color-layout-border-light--dark: #4A3025;    /* Subtle dividers */
+
+
+  /* ========================================================================
+     SPECIAL PURPOSE COLORS
+     ======================================================================== */
+  
+  /* Gradient for primary CTA buttons */
+  --color-primary-btn-gradient: linear-gradient(230deg, #D2691E 15%, #FF8C4D 100%);
+
+  /* Additional theme colors (can be customized per project) */
+  --color-theme-bg-dark: #EA5A36;
+  --color-theme-bg-darker: #D24B3E;
+  --color-theme-fg-dark: #185B50;
+  --color-layout-fg-darker: #114f45;
+
+
+  /* ========================================================================
+     OPACITY UTILITIES
+     White and black overlays for layering effects
+     ======================================================================== */
+  
+  /* White opacity variants (for dark backgrounds) */
+  --color-white-opacity-03: rgb(255 255 255 / 3%);
+  --color-white-opacity-05: rgb(255 255 255 / 5%);
+  --color-white-opacity-10: rgb(255 255 255 / 10%);
+  --color-white-opacity-20: rgb(255 255 255 / 20%);
+  --color-white-opacity-30: rgb(255 255 255 / 30%);
+  --color-white-opacity-40: rgb(255 255 255 / 40%);
+  --color-white-opacity-50: rgb(255 255 255 / 50%);
+  --color-white-opacity-60: rgb(255 255 255 / 60%);
+  --color-white-opacity-70: rgb(255 255 255 / 70%);
+  --color-white-opacity-80: rgb(255 255 255 / 80%);
+  --color-white-opacity-90: rgb(255 255 255 / 90%);
+  --color-white-opacity-100: rgb(255 255 255 / 100%);
+
+  /* Black opacity variants (for light backgrounds) */
+  --color-black-opacity-03: rgb(0 0 0 / 3%);
+  --color-black-opacity-05: rgb(0 0 0 / 5%);
+  --color-black-opacity-10: rgb(0 0 0 / 10%);
+  --color-black-opacity-20: rgb(0 0 0 / 20%);
+  --color-black-opacity-30: rgb(0 0 0 / 30%);
+  --color-black-opacity-40: rgb(0 0 0 / 40%);
+  --color-black-opacity-50: rgb(0 0 0 / 50%);
+  --color-black-opacity-60: rgb(0 0 0 / 60%);
+  --color-black-opacity-70: rgb(0 0 0 / 70%);
+  --color-black-opacity-80: rgb(0 0 0 / 80%);
+  --color-black-opacity-90: rgb(0 0 0 / 90%);
+  --color-black-opacity-100: rgb(0 0 0 / 100%);
+
+
+  /* ========================================================================
+     SHADCN/UI COMPATIBILITY LAYER
+     Maps custom tokens to shadcn component expectations
+     Automatically switches between light/dark via utility classes
+     ======================================================================== */
+  
+  --color-background: var(--color-layout-background);
+  --color-foreground: var(--color-fc-heading);
+  --color-card: var(--color-layout-foreground);
+  --color-card-foreground: var(--color-fc-heading);
+  --color-popover: var(--color-layout-foreground);
+  --color-popover-foreground: var(--color-fc-heading);
+  --color-primary: var(--color-primary-100);
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: var(--color-layout-background-dark);
+  --color-secondary-foreground: var(--color-fc-heading);
+  --color-muted: var(--color-layout-background-dark);
+  --color-muted-foreground: var(--color-fc-light);
+  --color-accent: var(--color-primary-12);
+  --color-accent-foreground: var(--color-fc-heading);
+  --color-destructive: #DC2626;
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: var(--color-layout-border);
+  --color-input: var(--color-layout-border);
+  --color-ring: var(--color-primary-50);
+
+
+  /* ========================================================================
+     TYPOGRAPHY SCALE
+     Consistent text sizing across the design system
+     ======================================================================== */
+  
+  --text-h1: 2rem;       /* 32px - Page titles */
+  --text-h2: 1.75rem;    /* 28px - Section headings */
+  --text-h3: 1.5rem;     /* 24px - Subsection headings */
+  --text-h4: 1.25rem;    /* 20px - Card headings */
+  --text-h5: 1rem;       /* 16px - Small headings */
+  --text-h6: 0.875rem;   /* 14px - Overline text */
+}
+
+/* ========================================================================
+   TAILWIND V4 COMPATIBILITY
+   Border color fix for v4 compatibility
+   ======================================================================== */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-layout-border, currentcolor);
+  }
+}
+
+/* ========================================================================
+   UTILITY CLASSES
+   Reusable utility classes that automatically switch between light/dark modes
+   ======================================================================== */
+
+/* ========================================================================
+   COLOR UTILITIES - FONT COLORS
+   Automatically switch between light/dark modes
+   Usage: <p class="theme-fc-base">Body text</p>
+   ======================================================================== */
+
+@utility theme-fc-base {
+  @apply text-fc-base dark:text-fc-base--dark;
+}
+
+@utility theme-fc-light {
+  @apply text-fc-light dark:text-fc-light--dark;
+}
+
+@utility theme-fc-lighter {
+  @apply text-fc-lighter dark:text-fc-lighter--dark;
+}
+
+@utility theme-fc-heading {
+  @apply text-fc-heading dark:text-fc-heading--dark;
+}  
+
+@utility theme-fc-heading-light {
+  @apply text-fc-heading-light dark:text-fc-heading-light--dark;
+}
+
+
+
+/* ========================================================================
+   COLOR UTILITIES - BACKGROUNDS
+   Page and section background colors
+   ======================================================================== */
+
+@utility theme-bg-color {
+  @apply bg-layout-background dark:bg-layout-background--dark;
+}
+
+@utility theme-bg-color-dark {
+  @apply bg-layout-background-dark dark:bg-layout-background-dark--dark;
+}
+
+/* ========================================================================
+   COLOR UTILITIES - FOREGROUNDS (CARDS/PANELS)
+   Elevated surface colors
+   ======================================================================== */
+
+@utility theme-fg-color {
+  @apply bg-layout-foreground dark:bg-layout-foreground--dark;
+}
+
+@utility theme-fg-color-dark {
+  @apply bg-layout-foreground-dark dark:bg-layout-foreground-dark--dark;
+}
+
+/* ========================================================================
+   COLOR UTILITIES - BORDERS
+   Border colors for dividers and outlines
+   ======================================================================== */
+
+@utility theme-border-color {
+  @apply border-layout-border dark:border-layout-border--dark;
+}
+
+@utility theme-border-color-light {
+  @apply border-layout-border-light dark:border-layout-border-light--dark;
+}
+
+
+
+/* Text Primary Colors */
+@utility theme-text-primary-color-100 {
+  @apply text-primary-100 dark:text-primary-100--dark;
+}
+
+@utility theme-text-primary-color-75 {
+  @apply text-primary-75 dark:text-primary-75--dark;
+} 
+
+@utility theme-text-primary-color-50 {
+  @apply text-primary-50 dark:text-primary-50--dark;
+}
+
+@utility theme-text-primary-color-25 {
+  @apply text-primary-25 dark:text-primary-25--dark;
+} 
+
+@utility theme-text-primary-color-12 {
+  @apply text-primary-12 dark:text-primary-12--dark;
+}
+
+@utility theme-text-primary-color-08 {
+  @apply text-primary-08 dark:text-primary-08--dark;
+} 
+
+@utility theme-text-primary-color-05 {
+  @apply text-primary-05 dark:text-primary-05--dark;
+}
+
+
+
+/* Background Primary Colors */
+@utility theme-bg-primary-color-100 {
+  @apply bg-primary-100 dark:bg-primary-100--dark;
+}
+
+@utility theme-bg-primary-color-75 {
+  @apply bg-primary-75 dark:bg-primary-75--dark;
+} 
+
+@utility theme-bg-primary-color-50 {
+  @apply bg-primary-50 dark:bg-primary-50--dark;
+}
+
+@utility theme-bg-primary-color-25 {
+  @apply bg-primary-25 dark:bg-primary-25--dark;
+}
+
+@utility theme-bg-primary-color-12 {
+  @apply bg-primary-12 dark:bg-primary-12--dark;
+}
+
+@utility theme-bg-primary-color-08 {
+  @apply bg-primary-08 dark:bg-primary-08--dark;
+}
+
+@utility theme-bg-primary-color-05 {
+  @apply bg-primary-05 dark:bg-primary-05--dark;
+}
+
+@utility theme-primary-btn-gradient {
+  background: var(--color-primary-btn-gradient);
+}
+
+/* ========================================================================
+   SHADCN COMPATIBILITY UTILITIES
+   Additional utilities for shadcn components
+   ======================================================================== */
+
+@utility theme-bg-card {
+  @apply bg-layout-foreground dark:bg-layout-foreground--dark;
+}
+
+@utility theme-bg-popover {
+  @apply bg-layout-foreground dark:bg-layout-foreground--dark;
+}
+
+@utility theme-bg-secondary {
+  @apply bg-layout-background-dark dark:bg-layout-background-dark--dark;
+}
+
+@utility theme-text-secondary {
+  @apply text-fc-heading dark:text-fc-heading--dark;
+}
+
+@utility theme-bg-muted {
+  @apply bg-layout-background-dark dark:bg-layout-foreground--dark;
+}
+
+@utility theme-text-muted {
+  @apply text-fc-light dark:text-fc-light--dark;
+}
+
+@utility theme-bg-accent {
+  @apply bg-primary-12 dark:bg-primary-12--dark;
+}
+
+@utility theme-text-accent {
+  @apply text-fc-heading dark:text-fc-heading--dark;
+}
+
+@utility theme-bg-destructive {
+  @apply bg-red-600 dark:bg-red-600;
+}
+
+@utility theme-text-destructive {
+  @apply text-red-600 dark:text-red-500;
+}
+
+@utility theme-border-input {
+  @apply border-layout-border dark:border-layout-border--dark;
+}
+
+@utility theme-ring {
+  @apply ring-primary-50 dark:ring-primary-50--dark;
+}
+
+
+
+/* Border Radius */
+@utility theme-rounded {
+  border-radius: var(--theme-rounded);
+}
+
+@utility theme-rounded-sm {
+  border-radius: var(--theme-rounded-sm);
+}
+
+@utility theme-rounded-t {
+  border-radius: var(--theme-rounded) var(--theme-rounded) 0 0;
+}
+
+@utility theme-rounded-b {
+  border-radius: 0 0 var(--theme-rounded) var(--theme-rounded);
+}
+
+@utility theme-rounded-l {
+  border-radius: var(--theme-rounded) 0 0 var(--theme-rounded);
+}
+
+@utility theme-rounded-r {
+  border-radius: 0 var(--theme-rounded) var(--theme-rounded) 0;
+}
+
+/* Shades */
+
+@utility theme-bg-shade-3 {
+  @apply bg-black-opacity-03 dark:bg-white-opacity-03;
+}
+
+@utility theme-bg-shade-5 {
+  @apply bg-black-opacity-05 dark:bg-white-opacity-05;
+}
+
+@utility theme-bg-shade-10 {
+  @apply bg-black-opacity-10 dark:bg-white-opacity-10;
+}
+
+@utility theme-bg-shade-20 {
+  @apply bg-black-opacity-20 dark:bg-white-opacity-20;
+}
+
+@utility theme-bg-shade-30 {
+  @apply bg-black-opacity-30 dark:bg-white-opacity-30;
+}
+
+@utility theme-bg-shade-40 {
+  @apply bg-black-opacity-40 dark:bg-white-opacity-40;
+}
+
+@utility theme-bg-shade-50 {
+  @apply bg-black-opacity-50 dark:bg-white-opacity-50;
+}
+
+@utility theme-bg-shade-60 {
+  @apply bg-black-opacity-60 dark:bg-white-opacity-60;
+}
+
+@utility theme-bg-shade-70 {
+  @apply bg-black-opacity-70 dark:bg-white-opacity-70;
+} 
+
+@utility theme-bg-shade-80 {
+  @apply bg-black-opacity-80 dark:bg-white-opacity-80;
+}
+
+@utility theme-bg-shade-90 {
+  @apply bg-black-opacity-90 dark:bg-white-opacity-90;
+} 
+
+@utility theme-bg-shade-100 {
+  @apply bg-black-opacity-100 dark:bg-white-opacity-100;
+}
+
+
+
+
+/* Button Hover Dark */
+@utility button-hover-dark {
+  &:hover {
+    box-shadow: rgb(0 0 0 / 10%) 0px 0px 0px 9999px inset;
+  }
+}
+
+@utility button-hover-darker {
+  &:hover {
+    box-shadow: rgb(0 0 0 / 15%) 0px 0px 0px 9999px inset;
+  }
+}
+
+
+
+/* ========================================================================
+   LAYOUT UTILITIES - CONTAINERS
+   Responsive container widths for consistent layouts
+   ======================================================================== */
+
+/**
+ * Standard container - max-width: 1280px (80rem)
+ * Usage: <div class="container">...</div>
+ */
+@utility container {
+  @apply max-w-7xl mx-auto px-4 sm:px-7;
+}
+
+/**
+ * Small container - max-width: 512px (32rem)
+ * Usage: Forms, narrow content
+ */
+@utility container-max-sm {
+  @apply max-w-lg mx-auto px-4 sm:px-7;
+}
+
+/**
+ * Tablet container - max-width: 768px (48rem)
+ * Usage: Tablet-optimized layouts
+ */
+@utility container-max-tab {
+  @apply max-w-3xl mx-auto px-4 sm:px-7;
+}
+
+/**
+ * Medium container - max-width: 896px (56rem)
+ * Usage: Medium-width content
+ */
+@utility container-max-md {
+  @apply max-w-4xl mx-auto px-4 sm:px-7;
+}
+
+/**
+ * Large container - max-width: 1024px (64rem)
+ * Usage: Wide content areas
+ */
+@utility container-max-lg {
+  @apply max-w-5xl mx-auto px-4 sm:px-7;
+}
+
+/**
+ * Extra large container - max-width: 1280px (80rem)
+ * Usage: Maximum content width
+ */
+@utility container-max-xl {
+  @apply max-w-7xl mx-auto px-4 sm:px-7;
+}
+
+
+
+/* ========================================================================
+   TYPOGRAPHY UTILITIES
+   Pre-styled heading classes combining size, weight, and color
+   Usage: <h1 class="theme-h1">Page Title</h1>
+   ======================================================================== */
+
+@utility theme-h1 {
+  @apply text-h1 font-medium theme-fc-heading;
+}
+
+@utility theme-h2 {
+  @apply text-h2 font-medium theme-fc-heading;
+}
+
+@utility theme-h3 {
+  @apply text-h3 font-medium theme-fc-heading;
+} 
+
+@utility theme-h4 {
+  @apply text-h4 font-medium theme-fc-heading;
+} 
+
+@utility theme-h5 {
+  @apply text-h5 font-bold theme-fc-heading;
+} 
+
+@utility theme-h6 {
+  @apply text-h6 font-bold uppercase theme-fc-heading;
+}
+
+
+
+/* ========================================================================
+   COMPONENT UTILITIES
+   Reusable patterns for common components
+   ======================================================================== */
+
+/**
+ * Navigation menu item styling
+ * Includes: colors, spacing, transitions, hover states
+ * Usage: <a class="nav-menu-item" href="/link">Menu Item</a>
+ */
+@utility nav-menu-item {
+  @apply theme-fc-light hover:text-primary-100 dark:hover:theme-fc-heading no-underline p-[6px] text-base md:text-sm transition-all duration-300;
+}
+
+/**
+ * Box - Standard card/panel styling
+ * Includes: background, border, and radius
+ * Usage: <div class="box">Card content</div>
+ */
+@utility box {
+  @apply theme-fg-color theme-border-color border theme-rounded;
+}
+
+@variant dark (&:where(.dark, .dark *));
+
+@layer base {
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-fc-heading font-medium;
+  }
+
+  input[type=color],
+  input[type=date],
+  input[type=datetime-local],
+  input[type=datetime],
+  input[type=email],
+  input[type=month],
+  input[type=number],
+  input[type=password],
+  input[type=range],
+  input[type=search],
+  input[type=tel],
+  input[type=text],
+  input[type=time],
+  input[type=url],
+  input[type=week],
+  select,
+  textarea {
+    display: inline-block;
+    font-family: inherit;
+    font-style: inherit;
+    font-size: 14px;
+    height: 52px;
+    outline: 0;
+    vertical-align: middle;
+    background-color: transparent;
+    border: 1px solid #ffffff20;
+    border-radius: var(--theme-rounded);
+    box-shadow: none;
+    padding: 15px 20px;
+    width: 100%;
+    transition: .3s;
+  }
+
+  textarea {
+    width: 100%;
+    height: auto;
+    padding: 20px;
+    line-height: 20px;
+    vertical-align: top;
+  }
+
+  input[type=text]:focus,
+  input[type=email]:focus,
+  input[type=url]:focus,
+  input[type=password]:focus,
+  input[type=search]:focus,
+  input[type=number]:focus,
+  input[type=tel]:focus,
+  input[type=range]:focus,
+  input[type=date]:focus,
+  input[type=month]:focus,
+  input[type=week]:focus,
+  input[type=time]:focus,
+  input[type=datetime]:focus,
+  input[type=datetime-local]:focus,
+  input[type=color]:focus,
+  textarea:focus {
+    background-color: #00000025;
+    border-color: #ffffff30;
+    box-shadow: none;
+  }
+
+  form ::placeholder {
+    color: var(--fc-lighter);
+    opacity: 1;
+  }
+
+  form  ::-ms-input-placeholder { 
+    color: var(--fc-lighter);
+  }
+
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.site {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.site-content {
+  flex-grow: 1; 
+}
+
+/*--------------------------------------------------------------
+# Header
+--------------------------------------------------------------*/
+.site-header {
+  z-index: 99;
+}
+
+.site-header.transparent-header {
+	position: absolute;
+	width: 100%;
+	top: 0;
+	left: 0;
+	border-bottom: 1px solid #ffffff10;
+	z-index: 99;
+  background: transparent;
+}
+
+/* Logo */
+.header-logo svg *,
+.site-branding * {
+  transition: .2s;
+}
+
+.site-header .header-logo {
+  color: var(--color-primary-100);
+}
+
+.site-header.transparent-header .header-logo {
+  color: #fff;
+}
+
+.header-logo:hover {
+  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), color 0.2s, box-shadow 0.2s;
+  transform: scale(1.07);
+}
+
+/* Navigation */
+.secondary-menu-list .nav-menu-item {
+  padding: 6px 12px;
+  display: block;
+  width: 100%;
+  border-radius: var(--theme-rounded-sm);
+}
+
+.site-header .main-navigation.mobile .nav-menu-item {
+  font-size: 16px;
+  color: var(--fc-base);
+  padding: 0;
+}
+
+/* Transparent Header */
+/* .transparent-header .site-branding:hover .branding-site-title {
+  color: #ffffffe0;
+} */
+
+/* .transparent-header .nav-menu-item{
+  color: #ffffff8a;
+}
+
+.transparent-header .nav-menu-item:hover{
+  color: #ffffff;
+} */
+
+/* .transparent-header
+
+.menu-item.current-menu-item .nav-menu-item {
+  color: var(--color-primary-100);
+} */
+
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+
+
+/* Rich Text Styles */
+
+.zee-richtext h1:first-child,
+.zee-richtext h2:first-child,
+.zee-richtext h3:first-child,
+.zee-richtext h4:first-child,
+.zee-richtext h5:first-child,
+.zee-richtext h6:first-child,
+.zee-richtext h7:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.text-gradient-1 {
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.425) -17%, rgb(255, 255, 255) 50%, rgb(255, 255, 255) 50%, rgba(255, 255, 255, 0.16) 113%);
+    display: inline-block;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    padding: max(0em, calc(calc(1.3em - var(--framer-blockquote-line-height, var(--framer-line-height, 1.3em))) / 2));
+    margin: min(0em, calc(calc(1.3em - var(--framer-blockquote-line-height, var(--framer-line-height, 1.3em))) / -2));
+}
+
+
+/* Single Lesson */
+
+.single-lesson-wrap .lesson-sidebar {
+  display: none;
+}
+
+.single-lesson-wrap.sidebar-open .lesson-sidebar {
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .single-lesson-wrap .lesson-sidebar { display: none; }
+  .single-lesson-wrap.sidebar-open .lesson-sidebar { display: block; }
+}
+
+@media (min-width: 768px) {
+  .single-lesson-wrap .lesson-sidebar { display: block; }
+  .single-lesson-wrap.sidebar-closed .lesson-sidebar { display: none; }
+}

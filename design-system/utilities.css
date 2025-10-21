@@ -1,0 +1,410 @@
+/**
+ * =============================================================================
+ * DESIGN SYSTEM - Utility Classes
+ * =============================================================================
+ * 
+ * This file contains all utility classes for the design system.
+ * Copy this file to your project alongside tokens.css.
+ * 
+ * Framework: Tailwind CSS v4.1.4
+ * Dark Mode: Class-based (.dark)
+ * =============================================================================
+ */
+
+/* ========================================================================
+   UTILITY CLASSES
+   Reusable utility classes that automatically switch between light/dark modes
+   ======================================================================== */
+
+/* ========================================================================
+   COLOR UTILITIES - FONT COLORS
+   Automatically switch between light/dark modes
+   Usage: <p class="theme-fc-base">Body text</p>
+   ======================================================================== */
+
+@utility theme-fc-base {
+  @apply text-fc-base dark:text-fc-base--dark;
+}
+
+@utility theme-fc-light {
+  @apply text-fc-light dark:text-fc-light--dark;
+}
+
+@utility theme-fc-lighter {
+  @apply text-fc-lighter dark:text-fc-lighter--dark;
+}
+
+@utility theme-fc-heading {
+  @apply text-fc-heading dark:text-fc-heading--dark;
+}  
+
+@utility theme-fc-heading-light {
+  @apply text-fc-heading-light dark:text-fc-heading-light--dark;
+}
+
+/* ========================================================================
+   COLOR UTILITIES - BACKGROUNDS
+   Page and section background colors
+   ======================================================================== */
+
+@utility theme-bg-color {
+  @apply bg-layout-background dark:bg-layout-background--dark;
+}
+
+@utility theme-bg-color-dark {
+  @apply bg-layout-background-dark dark:bg-layout-background-dark--dark;
+}
+
+/* ========================================================================
+   COLOR UTILITIES - FOREGROUNDS (CARDS/PANELS)
+   Elevated surface colors
+   ======================================================================== */
+
+@utility theme-fg-color {
+  @apply bg-layout-foreground dark:bg-layout-foreground--dark;
+}
+
+@utility theme-fg-color-dark {
+  @apply bg-layout-foreground-dark dark:bg-layout-foreground-dark--dark;
+}
+
+/* ========================================================================
+   COLOR UTILITIES - BORDERS
+   Border colors for dividers and outlines
+   ======================================================================== */
+
+@utility theme-border-color {
+  @apply border-layout-border dark:border-layout-border--dark;
+}
+
+@utility theme-border-color-light {
+  @apply border-layout-border-light dark:border-layout-border-light--dark;
+}
+
+/* ========================================================================
+   TEXT PRIMARY COLORS
+   Primary brand color text utilities
+   ======================================================================== */
+
+@utility theme-text-primary-color-100 {
+  @apply text-primary-100 dark:text-primary-100--dark;
+}
+
+@utility theme-text-primary-color-75 {
+  @apply text-primary-75 dark:text-primary-75--dark;
+} 
+
+@utility theme-text-primary-color-50 {
+  @apply text-primary-50 dark:text-primary-50--dark;
+}
+
+@utility theme-text-primary-color-25 {
+  @apply text-primary-25 dark:text-primary-25--dark;
+} 
+
+@utility theme-text-primary-color-12 {
+  @apply text-primary-12 dark:text-primary-12--dark;
+}
+
+@utility theme-text-primary-color-08 {
+  @apply text-primary-08 dark:text-primary-08--dark;
+} 
+
+@utility theme-text-primary-color-05 {
+  @apply text-primary-05 dark:text-primary-05--dark;
+}
+
+/* ========================================================================
+   BACKGROUND PRIMARY COLORS
+   Primary brand color background utilities
+   ======================================================================== */
+
+@utility theme-bg-primary-color-100 {
+  @apply bg-primary-100 dark:bg-primary-100--dark;
+}
+
+@utility theme-bg-primary-color-75 {
+  @apply bg-primary-75 dark:bg-primary-75--dark;
+} 
+
+@utility theme-bg-primary-color-50 {
+  @apply bg-primary-50 dark:bg-primary-50--dark;
+}
+
+@utility theme-bg-primary-color-25 {
+  @apply bg-primary-25 dark:bg-primary-25--dark;
+}
+
+@utility theme-bg-primary-color-12 {
+  @apply bg-primary-12 dark:bg-primary-12--dark;
+}
+
+@utility theme-bg-primary-color-08 {
+  @apply bg-primary-08 dark:bg-primary-08--dark;
+}
+
+@utility theme-bg-primary-color-05 {
+  @apply bg-primary-05 dark:bg-primary-05--dark;
+}
+
+@utility theme-primary-btn-gradient {
+  background: var(--color-primary-btn-gradient);
+}
+
+/* ========================================================================
+   SHADCN COMPATIBILITY UTILITIES
+   Additional utilities for shadcn components
+   ======================================================================== */
+
+@utility theme-bg-card {
+  @apply bg-layout-foreground dark:bg-layout-foreground--dark;
+}
+
+@utility theme-bg-popover {
+  @apply bg-layout-foreground dark:bg-layout-foreground--dark;
+}
+
+@utility theme-bg-secondary {
+  @apply bg-layout-background-dark dark:bg-layout-background-dark--dark;
+}
+
+@utility theme-text-secondary {
+  @apply text-fc-heading dark:text-fc-heading--dark;
+}
+
+@utility theme-bg-muted {
+  @apply bg-layout-background-dark dark:bg-layout-foreground--dark;
+}
+
+@utility theme-text-muted {
+  @apply text-fc-light dark:text-fc-light--dark;
+}
+
+@utility theme-bg-accent {
+  @apply bg-primary-12 dark:bg-primary-12--dark;
+}
+
+@utility theme-text-accent {
+  @apply text-fc-heading dark:text-fc-heading--dark;
+}
+
+@utility theme-bg-destructive {
+  @apply bg-red-600 dark:bg-red-600;
+}
+
+@utility theme-text-destructive {
+  @apply text-red-600 dark:text-red-500;
+}
+
+@utility theme-border-input {
+  @apply border-layout-border dark:border-layout-border--dark;
+}
+
+@utility theme-ring {
+  @apply ring-primary-50 dark:ring-primary-50--dark;
+}
+
+/* ========================================================================
+   BORDER RADIUS UTILITIES
+   Consistent border radius values
+   ======================================================================== */
+
+@utility theme-rounded {
+  border-radius: var(--theme-rounded);
+}
+
+@utility theme-rounded-sm {
+  border-radius: var(--theme-rounded-sm);
+}
+
+@utility theme-rounded-t {
+  border-radius: var(--theme-rounded) var(--theme-rounded) 0 0;
+}
+
+@utility theme-rounded-b {
+  border-radius: 0 0 var(--theme-rounded) var(--theme-rounded);
+}
+
+@utility theme-rounded-l {
+  border-radius: var(--theme-rounded) 0 0 var(--theme-rounded);
+}
+
+@utility theme-rounded-r {
+  border-radius: 0 var(--theme-rounded) var(--theme-rounded) 0;
+}
+
+/* ========================================================================
+   SHADE UTILITIES
+   Opacity overlays for layering effects
+   ======================================================================== */
+
+@utility theme-bg-shade-3 {
+  @apply bg-black-opacity-03 dark:bg-white-opacity-03;
+}
+
+@utility theme-bg-shade-5 {
+  @apply bg-black-opacity-05 dark:bg-white-opacity-05;
+}
+
+@utility theme-bg-shade-10 {
+  @apply bg-black-opacity-10 dark:bg-white-opacity-10;
+}
+
+@utility theme-bg-shade-20 {
+  @apply bg-black-opacity-20 dark:bg-white-opacity-20;
+}
+
+@utility theme-bg-shade-30 {
+  @apply bg-black-opacity-30 dark:bg-white-opacity-30;
+}
+
+@utility theme-bg-shade-40 {
+  @apply bg-black-opacity-40 dark:bg-white-opacity-40;
+}
+
+@utility theme-bg-shade-50 {
+  @apply bg-black-opacity-50 dark:bg-white-opacity-50;
+}
+
+@utility theme-bg-shade-60 {
+  @apply bg-black-opacity-60 dark:bg-white-opacity-60;
+}
+
+@utility theme-bg-shade-70 {
+  @apply bg-black-opacity-70 dark:bg-white-opacity-70;
+} 
+
+@utility theme-bg-shade-80 {
+  @apply bg-black-opacity-80 dark:bg-white-opacity-80;
+}
+
+@utility theme-bg-shade-90 {
+  @apply bg-black-opacity-90 dark:bg-white-opacity-90;
+} 
+
+@utility theme-bg-shade-100 {
+  @apply bg-black-opacity-100 dark:bg-white-opacity-100;
+}
+
+/* ========================================================================
+   BUTTON HOVER UTILITIES
+   Hover effects for buttons
+   ======================================================================== */
+
+@utility button-hover-dark {
+  &:hover {
+    box-shadow: rgb(0 0 0 / 10%) 0px 0px 0px 9999px inset;
+  }
+}
+
+@utility button-hover-darker {
+  &:hover {
+    box-shadow: rgb(0 0 0 / 15%) 0px 0px 0px 9999px inset;
+  }
+}
+
+/* ========================================================================
+   LAYOUT UTILITIES - CONTAINERS
+   Responsive container widths for consistent layouts
+   ======================================================================== */
+
+/**
+ * Standard container - max-width: 1280px (80rem)
+ * Usage: <div class="container">...</div>
+ */
+@utility container {
+  @apply max-w-7xl mx-auto px-4 sm:px-7;
+}
+
+/**
+ * Small container - max-width: 512px (32rem)
+ * Usage: Forms, narrow content
+ */
+@utility container-max-sm {
+  @apply max-w-lg mx-auto px-4 sm:px-7;
+}
+
+/**
+ * Tablet container - max-width: 768px (48rem)
+ * Usage: Tablet-optimized layouts
+ */
+@utility container-max-tab {
+  @apply max-w-3xl mx-auto px-4 sm:px-7;
+}
+
+/**
+ * Medium container - max-width: 896px (56rem)
+ * Usage: Medium-width content
+ */
+@utility container-max-md {
+  @apply max-w-4xl mx-auto px-4 sm:px-7;
+}
+
+/**
+ * Large container - max-width: 1024px (64rem)
+ * Usage: Wide content areas
+ */
+@utility container-max-lg {
+  @apply max-w-5xl mx-auto px-4 sm:px-7;
+}
+
+/**
+ * Extra large container - max-width: 1280px (80rem)
+ * Usage: Maximum content width
+ */
+@utility container-max-xl {
+  @apply max-w-7xl mx-auto px-4 sm:px-7;
+}
+
+/* ========================================================================
+   TYPOGRAPHY UTILITIES
+   Pre-styled heading classes combining size, weight, and color
+   Usage: <h1 class="theme-h1">Page Title</h1>
+   ======================================================================== */
+
+@utility theme-h1 {
+  @apply text-h1 font-medium theme-fc-heading;
+}
+
+@utility theme-h2 {
+  @apply text-h2 font-medium theme-fc-heading;
+}
+
+@utility theme-h3 {
+  @apply text-h3 font-medium theme-fc-heading;
+} 
+
+@utility theme-h4 {
+  @apply text-h4 font-medium theme-fc-heading;
+} 
+
+@utility theme-h5 {
+  @apply text-h5 font-bold theme-fc-heading;
+} 
+
+@utility theme-h6 {
+  @apply text-h6 font-bold uppercase theme-fc-heading;
+}
+
+/* ========================================================================
+   COMPONENT UTILITIES
+   Reusable patterns for common components
+   ======================================================================== */
+
+/**
+ * Navigation menu item styling
+ * Includes: colors, spacing, transitions, hover states
+ * Usage: <a class="nav-menu-item" href="/link">Menu Item</a>
+ */
+@utility nav-menu-item {
+  @apply theme-fc-light hover:text-primary-100 dark:hover:theme-fc-heading no-underline p-[6px] text-base md:text-sm transition-all duration-300;
+}
+
+/**
+ * Box - Standard card/panel styling
+ * Includes: background, border, and radius
+ * Usage: <div class="box">Card content</div>
+ */
+@utility box {
+  @apply theme-fg-color theme-border-color border theme-rounded;
+}
