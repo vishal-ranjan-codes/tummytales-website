@@ -36,6 +36,26 @@
   --theme-rounded-sm: 6px;
 }
 
+/* ========================================================================
+   SMOOTH SCROLL BEHAVIOR
+   Enable smooth scrolling for better UX
+   ======================================================================== */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Scroll margin for sections to account for fixed header */
+.scroll-mt-20 {
+  scroll-margin-top: 5rem;
+}
+
 @theme {
   /* ========================================================================
      DESIGN TOKENS - LIGHT THEME
