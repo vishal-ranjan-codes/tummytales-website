@@ -7,14 +7,13 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { UserInfo } from '@/app/components/auth-components'
+import { useAuth } from '@/lib/contexts/AuthContext'
 import StatusBanner from '@/app/components/dashboard/StatusBanner'
 import ChecklistItem from '@/app/components/dashboard/ChecklistItem'
 import StatCard from '@/app/components/dashboard/StatCard'
 import EmptyState from '@/app/components/dashboard/EmptyState'
-import RoleBadge from '@/app/components/RoleBadge'
+import { RoleBadge } from '@/lib/components/auth/RoleSwitcher'
 import { MapPin, Package, DollarSign, Clock } from 'lucide-react'
-import type { User } from '@supabase/supabase-js'
 
 interface RiderData {
   id: string
@@ -23,11 +22,14 @@ interface RiderData {
   status: string
 }
 
-function RiderDashboard({ user }: { user: User }) {
+export default function RiderDashboardPage() {
+  const { user } = useAuth()
   const [rider, setRider] = useState<RiderData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!user) return
+
     const fetchData = async () => {
       const supabase = createClient()
 
@@ -43,7 +45,7 @@ function RiderDashboard({ user }: { user: User }) {
     }
 
     fetchData()
-  }, [user.id])
+  }, [user])
 
   if (loading) {
     return (
@@ -62,7 +64,7 @@ function RiderDashboard({ user }: { user: User }) {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold theme-fc-heading mb-2">
-            Welcome, {user.user_metadata?.full_name || 'Rider'}!
+            Welcome, {user?.user_metadata?.full_name || 'Rider'}!
           </h1>
           <p className="theme-fc-light">
             Your delivery dashboard
@@ -164,24 +166,6 @@ function RiderDashboard({ user }: { user: User }) {
         </div>
       </div>
     </div>
-  )
-}
-
-export default function RiderDashboardPage() {
-  return (
-    <UserInfo>
-      {({ user, loading }) => {
-        if (loading || !user) {
-          return (
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-100" />
-            </div>
-          )
-        }
-        
-        return <RiderDashboard user={user} />
-      }}
-    </UserInfo>
   )
 }
 

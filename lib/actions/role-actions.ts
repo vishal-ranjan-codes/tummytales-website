@@ -80,6 +80,59 @@ export async function addRoleToUser(userId: string, role: UserRole): Promise<Act
 }
 
 /**
+ * Ensure current authenticated user has the given role.
+ * Safe to call during onboarding to reflect intent immediately.
+ * Does not mark onboarding completed or create domain rows.
+ */
+export async function ensureCurrentUserHasRole(role: UserRole): Promise<ActionResponse> {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { success: false, error: 'Not authenticated' }
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('roles, default_role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile) {
+      return { success: false, error: 'User profile not found' }
+    }
+
+    const currentRoles: UserRole[] = profile.roles || []
+    if (currentRoles.includes(role)) {
+      return { success: true }
+    }
+
+    const updatedRoles = [...currentRoles, role]
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        roles: updatedRoles,
+        // Set default_role to intended role only if no default set yet
+        default_role: profile.default_role || role,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id)
+
+    if (error) {
+      console.error('Error ensuring role:', error)
+      return { success: false, error: 'Failed to update roles' }
+    }
+
+    revalidatePath('/')
+    return { success: true }
+  } catch (error) {
+    console.error('Ensure role error:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+/**
  * Remove a role from a user (admin only)
  * @param userId - User ID to remove role from
  * @param role - Role to remove

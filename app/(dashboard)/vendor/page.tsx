@@ -7,14 +7,13 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { UserInfo } from '@/app/components/auth-components'
+import { useAuth } from '@/lib/contexts/AuthContext'
 import StatusBanner from '@/app/components/dashboard/StatusBanner'
 import ChecklistItem from '@/app/components/dashboard/ChecklistItem'
 import StatCard from '@/app/components/dashboard/StatCard'
-import RoleBadge from '@/app/components/RoleBadge'
+import { RoleBadge } from '@/lib/components/auth/RoleSwitcher'
 import { Store, Package, Star, DollarSign } from 'lucide-react'
 import Link from 'next/link'
-import type { User } from '@supabase/supabase-js'
 
 interface VendorData {
   id: string
@@ -28,12 +27,15 @@ interface VendorData {
   rating_count?: number
 }
 
-function VendorDashboard({ user }: { user: User }) {
+export default function VendorDashboardPage() {
+  const { user } = useAuth()
   const [vendor, setVendor] = useState<VendorData | null>(null)
   const [mealCount, setMealCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!user) return
+
     const fetchData = async () => {
       const supabase = createClient()
 
@@ -60,7 +62,7 @@ function VendorDashboard({ user }: { user: User }) {
     }
 
     fetchData()
-  }, [user.id])
+  }, [user])
 
   if (loading) {
     return (
@@ -80,7 +82,7 @@ function VendorDashboard({ user }: { user: User }) {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold theme-fc-heading mb-2">
-            {vendor?.display_name || user.user_metadata?.full_name || 'Your Kitchen'}
+            {vendor?.display_name || user?.user_metadata?.full_name || 'Your Kitchen'}
           </h1>
           <p className="theme-fc-light">
             Manage your kitchen and orders
@@ -216,24 +218,6 @@ function VendorDashboard({ user }: { user: User }) {
         </Link>
       </div>
     </div>
-  )
-}
-
-export default function VendorDashboardPage() {
-  return (
-    <UserInfo>
-      {({ user, loading }) => {
-        if (loading || !user) {
-          return (
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-100" />
-            </div>
-          )
-        }
-        
-        return <VendorDashboard user={user} />
-      }}
-    </UserInfo>
   )
 }
 

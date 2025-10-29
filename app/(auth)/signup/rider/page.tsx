@@ -123,6 +123,8 @@ function RiderSignupContent() {
       
       if (result.success) {
         toast.success('Phone verified successfully')
+        const { ensureCurrentUserHasRole } = await import('@/lib/actions/role-actions')
+        await ensureCurrentUserHasRole('rider')
         // Redirect to rider onboarding
         router.push('/onboarding/rider')
       } else {
@@ -190,6 +192,8 @@ function RiderSignupContent() {
         if (authConfig.requirePhoneVerification) {
           setStep('phone_verify')
         } else {
+          const { ensureCurrentUserHasRole } = await import('@/lib/actions/role-actions')
+          await ensureCurrentUserHasRole('rider')
           router.push('/onboarding/rider')
         }
       } else {
@@ -204,6 +208,8 @@ function RiderSignupContent() {
     // Save phone number to database
     const { updatePhoneNumber } = await import('@/lib/actions/auth-actions')
     await updatePhoneNumber(verifiedPhone)
+    const { ensureCurrentUserHasRole } = await import('@/lib/actions/role-actions')
+    await ensureCurrentUserHasRole('rider')
     // Redirect to rider onboarding
     router.push('/onboarding/rider')
   }

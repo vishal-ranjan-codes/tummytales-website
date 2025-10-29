@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import HeaderLogo from "./HeaderLogo"
-import HeaderMenuDropdown from "./HeaderMenuDropdown"
-import UserAvatarMenu from "./UserAvatarMenu"
 import { Button } from '@/components/ui/button'
-import { handleHashNavigation } from '@/lib/utils/navigation'
-import { SignedIn, SignedOut } from './auth-components'
+import { getCurrentSection } from '@/lib/utils/scroll'
+import { navigateToSection, handleHashNavigation } from '@/lib/utils/navigation'
+import { useAuth } from '@/lib/contexts/AuthContext'
+import AccountMenu from '@/lib/components/auth/AccountMenu'
 
 // Define rules for transparent headers
 const transparentRules: Array<{ path: string; exact?: boolean }> = [
@@ -43,14 +43,19 @@ function isFullWidthPath(pathname: string): boolean {
 
 export default function Header() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { isAuthenticated, loading } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isTransparent, setIsTransparent] = useState(() => isTransparentPath(pathname))
   const [isFullWidth, setIsFullWidth] = useState(() => isFullWidthPath(pathname))
   const [isClient, setIsClient] = useState(false)
+  const [activeSection, setActiveSection] = useState<string | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
+    setIsHydrated(true)
     setIsTransparent(isTransparentPath(pathname))
     setIsFullWidth(isFullWidthPath(pathname))
 
@@ -58,19 +63,24 @@ export default function Header() {
     handleHashNavigation()
   }, [pathname])
 
-  // Handle scroll for sticky header
+  // Handle scroll for active section and sticky header
   useEffect(() => {
-    if (!isClient) return
+    if (!isClient || pathname !== '/') return
+
+    const sections = ['how-it-works', 'consumers', 'vendors', 'riders']
 
     const handleScroll = () => {
       const scrolled = window.scrollY > 20
       setIsScrolled(scrolled)
+
+      const current = getCurrentSection(sections)
+      setActiveSection(current)
     }
 
     handleScroll() // Initial check
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [isClient])
+  }, [isClient, pathname])
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -79,6 +89,14 @@ export default function Header() {
   const closeMenu = () => {
     setIsMenuOpen(false)
   }
+
+  const handleSectionClick = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
+    e.preventDefault()
+    closeMenu()
+    navigateToSection(sectionId, pathname, router)
+  }
+
+  const isHomepage = pathname === '/'
 
   return (
     <header 
@@ -102,41 +120,85 @@ export default function Header() {
             aria-label="Main navigation"
           >
             <ul id="primary-menu" className="main-menu-list m-0 p-0 list-none flex flex-wrap gap-1">
-              <li className={`menu-item flex justify-start items-center relative ${pathname === "/" ? "current-menu-item" : ""}`}>
+              {isHomepage ? (
+                <>
+                  <li className="menu-item flex justify-start items-center relative">
+                    <a 
+                      href="#how-it-works" 
+                      onClick={(e) => handleSectionClick(e, 'how-it-works')}
+                      className={`nav-menu-item ${activeSection === 'how-it-works' ? "theme-text-primary-color-100" : ""}`}
+                    >
+                      How It Works
+                    </a>
+                  </li>
+                  <li className="menu-item flex justify-start items-center relative">
+                    <a 
+                      href="#consumers" 
+                      onClick={(e) => handleSectionClick(e, 'consumers')}
+                      className={`nav-menu-item ${activeSection === 'consumers' ? "theme-text-primary-color-100" : ""}`}
+                    >
+                      For Consumers
+                    </a>
+                  </li>
+                  <li className="menu-item flex justify-start items-center relative">
+                    <a 
+                      href="#vendors" 
+                      onClick={(e) => handleSectionClick(e, 'vendors')}
+                      className={`nav-menu-item ${activeSection === 'vendors' ? "theme-text-primary-color-100" : ""}`}
+                    >
+                      For Vendors
+                    </a>
+                  </li>
+                  <li className="menu-item flex justify-start items-center relative">
+                    <a 
+                      href="#riders" 
+                      onClick={(e) => handleSectionClick(e, 'riders')}
+                      className={`nav-menu-item ${activeSection === 'riders' ? "theme-text-primary-color-100" : ""}`}
+                    >
+                      For Riders
+                    </a>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li className="menu-item flex justify-start items-center relative">
+                    <Link href="/#how-it-works" className="nav-menu-item">
+                      How It Works
+                    </Link>
+                  </li>
+                  <li className="menu-item flex justify-start items-center relative">
+                    <Link href="/#consumers" className="nav-menu-item">
+                      For Consumers
+                    </Link>
+                  </li>
+                  <li className="menu-item flex justify-start items-center relative">
+                    <Link href="/#vendors" className="nav-menu-item">
+                      For Vendors
+                    </Link>
+                  </li>
+                  <li className="menu-item flex justify-start items-center relative">
+                    <Link href="/#riders" className="nav-menu-item">
+                      For Riders
+                    </Link>
+                  </li>
+                </>
+              )}
+              <li className={`menu-item flex justify-start items-center relative ${pathname === "/about" ? "current-menu-item" : ""}`}>
                 <Link 
-                  href="/" 
-                  className={`nav-menu-item ${pathname === "/" ? "theme-text-primary-color-100" : ""}`}
+                  href="/about" 
+                  className={`nav-menu-item ${pathname === "/about" ? "theme-text-primary-color-100" : ""}`}
                 >
-                  Home
+                  About
                 </Link>
               </li>
-              <li className={`menu-item flex justify-start items-center relative ${pathname === "/homechefs" ? "current-menu-item" : ""}`}>
+              <li className={`menu-item flex justify-start items-center relative ${pathname === "/contact" ? "current-menu-item" : ""}`}>
                 <Link 
-                  href="/homechefs" 
-                  className={`nav-menu-item ${pathname === "/homechefs" ? "theme-text-primary-color-100" : ""}`}
+                  href="/contact" 
+                  className={`nav-menu-item ${pathname === "/contact" ? "theme-text-primary-color-100" : ""}`}
                 >
-                  Browse Chefs
+                  Contact
                 </Link>
               </li>
-              <HeaderMenuDropdown 
-                megaClass='flex justify-start items-center relative'
-                buttonText="Partner With Us" 
-                buttonExtraClasses="flex gap-[2px] items-center cursor-pointer"
-                secondaryMenuExtraClasses="m-0 p-0 py-[6px] list-none flex flex-col absolute top-full box theme-rounded-sm"
-                isCurrentPage={pathname.startsWith('/join-')}
-              >
-                <li className={`menu-item flex justify-start items-center relative ${pathname === "/join-vendor" ? "current-menu-item" : ""}`}>
-                  <Link href="/join-vendor" className="nav-menu-item" onClick={closeMenu}>
-                    Join as Vendor
-                  </Link>
-                </li>
-                <li className={`menu-item flex justify-start items-center relative ${pathname === "/join-rider" ? "current-menu-item" : ""}`}>
-                  <Link href="/join-rider" className="nav-menu-item" onClick={closeMenu}>
-                    Join as Rider
-                  </Link>
-                </li>
-              </HeaderMenuDropdown>
-              
             </ul>
           </nav>
 
@@ -146,66 +208,84 @@ export default function Header() {
             className="secondary-navigation hidden lg:flex gap-3 items-center"
             aria-label="User navigation"
           >
-            <SignedOut>
-              <Link href="/login">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-sm min-w-[80px]"
-                  aria-label="Login to your account"
-                >
-                  Login
-                </Button>
-              </Link>
-              <Link href="/signup/customer">
-                <Button 
-                  variant="primary-dark-white" 
-                  size="sm" 
-                  className="text-sm min-w-[80px]"
-                  aria-label="Sign up for Tummy Tales"
-                >
-                  Sign Up
-                </Button>
-              </Link>
-            </SignedOut>
-            <SignedIn>
-              <UserAvatarMenu />
-            </SignedIn>
+            {!isHydrated || loading ? (
+              // Show loading state during SSR and hydration
+              <>
+                <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
+                <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
+              </>
+            ) : !isAuthenticated ? (
+              // Show login/signup when not authenticated
+              <>
+                <Link href="/login">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-sm min-w-[80px]"
+                    aria-label="Login to your account"
+                  >
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/signup/customer">
+                  <Button 
+                    variant="primary-dark-white" 
+                    size="sm" 
+                    className="text-sm min-w-[80px]"
+                    aria-label="Sign up for Tummy Tales"
+                  >
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              // Show account menu when authenticated
+              <AccountMenu variant="desktop" />
+            )}
           </nav>
 
           {/* Mobile: Buttons + Menu Toggle */}
           <div className='flex gap-3 items-center lg:hidden'>
-            <SignedOut>
-              <Link href="/login">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-sm"
-                  aria-label="Login to your account"
-                >
-                  Login
-                </Button>
-              </Link>
-              <Link href="/signup/customer">
-                <Button 
-                  variant="primary-dark-white" 
-                  size="sm" 
-                  className="text-sm"
-                  aria-label="Sign up for Tummy Tales"
-                >
-                  Sign Up
-                </Button>
-              </Link>
-            </SignedOut>
-            <SignedIn>
-              <UserAvatarMenu />
-            </SignedIn>
+            {!isHydrated || loading ? (
+              // Show loading state during SSR and hydration
+              <>
+                <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
+                <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
+              </>
+            ) : !isAuthenticated ? (
+              // Show login/signup when not authenticated
+              <>
+                <Link href="/login">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-sm"
+                    aria-label="Login to your account"
+                  >
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/signup/customer">
+                  <Button 
+                    variant="primary-dark-white" 
+                    size="sm" 
+                    className="text-sm"
+                    aria-label="Sign up for Tummy Tales"
+                  >
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              // Show account menu when authenticated
+              <AccountMenu variant="mobile" />
+            )}
 
             <button 
               onClick={toggleMenu} 
               className="theme-fc-base hover:theme-fc-heading transition-all duration-300 cursor-pointer p-2 -mr-2"
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={isMenuOpen ? "true" : "false"}
+              aria-expanded={isMenuOpen}
               aria-controls="mobile-menu"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -224,43 +304,86 @@ export default function Header() {
         >
           <nav className="main-navigation mobile p-6">
             <ul className="main-menu-list m-0 p-0 list-none flex flex-wrap gap-4 flex-col">
+              {isHomepage ? (
+                <>
+                  <li className="menu-item">
+                    <a 
+                      href="#how-it-works" 
+                      onClick={(e) => handleSectionClick(e, 'how-it-works')}
+                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
+                    >
+                      How It Works
+                    </a>
+                  </li>
+                  <li className="menu-item">
+                    <a 
+                      href="#consumers" 
+                      onClick={(e) => handleSectionClick(e, 'consumers')}
+                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
+                    >
+                      For Consumers
+                    </a>
+                  </li>
+                  <li className="menu-item">
+                    <a 
+                      href="#vendors" 
+                      onClick={(e) => handleSectionClick(e, 'vendors')}
+                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
+                    >
+                      For Vendors
+                    </a>
+                  </li>
+                  <li className="menu-item">
+                    <a 
+                      href="#riders" 
+                      onClick={(e) => handleSectionClick(e, 'riders')}
+                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
+                    >
+                      For Riders
+                    </a>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li className="menu-item">
+                    <Link 
+                      href="/#how-it-works" 
+                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
+                      onClick={closeMenu}
+                    >
+                      How It Works
+                    </Link>
+                  </li>
+                  <li className="menu-item">
+                    <Link 
+                      href="/#consumers" 
+                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
+                      onClick={closeMenu}
+                    >
+                      For Consumers
+                    </Link>
+                  </li>
+                  <li className="menu-item">
+                    <Link 
+                      href="/#vendors" 
+                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
+                      onClick={closeMenu}
+                    >
+                      For Vendors
+                    </Link>
+                  </li>
+                  <li className="menu-item">
+                    <Link 
+                      href="/#riders" 
+                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
+                      onClick={closeMenu}
+                    >
+                      For Riders
+                    </Link>
+                  </li>
+                </>
+              )}
               <li className="menu-item">
-                <Link 
-                  href="/" 
-                  className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
-                  onClick={closeMenu}
-                >
-                  Home
-                </Link>
-              </li>
-              <li className="menu-item">
-                <Link 
-                  href="/homechefs" 
-                  className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
-                  onClick={closeMenu}
-                >
-                  Browse Chefs
-                </Link>
-              </li>
-              
-              {/* Partner With Us Section */}
-              <li className="menu-item pt-2 border-t theme-border-color-light">
-                <p className="text-xs font-semibold uppercase theme-fc-light mb-3 tracking-wider">Partner With Us</p>
-                <div className="flex flex-col gap-2 ml-2">
-                  <Link href="/join-vendor" onClick={closeMenu}>
-                    <Button variant="ghost" size="sm" className="w-full justify-start">
-                      Join as Vendor
-                    </Button>
-                  </Link>
-                  <Link href="/join-rider" onClick={closeMenu}>
-                    <Button variant="ghost" size="sm" className="w-full justify-start">
-                      Join as Rider
-                    </Button>
-                  </Link>
-                </div>
-              </li>
-
-              <li className="menu-item pt-2 border-t theme-border-color-light">
                 <Link 
                   href="/about" 
                   className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
@@ -279,8 +402,19 @@ export default function Header() {
                 </Link>
               </li>
 
-              {/* Mobile Signup Options - Show only when logged out */}
-              <SignedOut>
+              {/* Mobile Signup Options */}
+              {!isHydrated || loading ? (
+                // Show loading state during SSR and hydration
+                <li className="menu-item pt-4 border-t theme-border-color-light">
+                  <div className="animate-pulse bg-gray-200 h-4 w-24 rounded mb-3"></div>
+                  <div className="flex flex-col gap-2">
+                    <div className="animate-pulse bg-gray-200 h-8 w-full rounded"></div>
+                    <div className="animate-pulse bg-gray-200 h-8 w-full rounded"></div>
+                    <div className="animate-pulse bg-gray-200 h-8 w-full rounded"></div>
+                  </div>
+                </li>
+              ) : !isAuthenticated ? (
+                // Show signup options when not authenticated
                 <li className="menu-item pt-4 border-t theme-border-color-light">
                   <p className="text-xs font-semibold uppercase theme-fc-light mb-3 tracking-wider">Get Started</p>
                   <div className="flex flex-col gap-2">
@@ -301,7 +435,7 @@ export default function Header() {
                     </Link>
                   </div>
                 </li>
-              </SignedOut>
+              ) : null}
             </ul>
           </nav>
         </div>

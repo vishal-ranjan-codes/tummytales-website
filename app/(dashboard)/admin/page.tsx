@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import StatCard from '@/app/components/dashboard/StatCard'
-import RoleBadge from '@/app/components/RoleBadge'
+import { RoleBadge } from '@/lib/components/auth/RoleSwitcher'
 import { Users, Store, Bike, MapPin } from 'lucide-react'
 import Link from 'next/link'
 

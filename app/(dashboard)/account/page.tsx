@@ -5,17 +5,15 @@
  * User profile and settings management
  */
 
-import { useUserRoles } from '@/lib/hooks/useUserRoles'
-import { signOut } from '@/lib/auth/otp'
-import { formatPhoneForDisplay } from '@/lib/auth/phone-validator'
-import RoleBadge from '@/app/components/RoleBadge'
+import { useAuth } from '@/lib/contexts/AuthContext'
+import { RoleBadge } from '@/lib/components/auth/RoleSwitcher'
 import { Button } from '@/components/ui/button'
 import { User, Phone, Mail, MapPin, LogOut, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
 export default function AccountPage() {
-  const { profile, loading } = useUserRoles()
+  const { user, profile, signOut, loading } = useAuth()
 
   if (loading) {
     return (

@@ -39,8 +39,8 @@ const Footer = () => {
                     </Link>
                   </li>
                   <li>
-                    <Link href="/homechefs" className="text-sm theme-fc-light hover:theme-text-primary-color-100 transition-colors">
-                      Browse Home Chefs
+                    <Link href="/vendors" className="text-sm theme-fc-light hover:theme-text-primary-color-100 transition-colors">
+                      Browse Vendors
                     </Link>
                   </li>
                 </ul>
