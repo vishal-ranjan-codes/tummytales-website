@@ -123,6 +123,9 @@ function VendorSignupContent() {
       
       if (result.success) {
         toast.success('Phone verified successfully')
+        // Ensure role reflects intent immediately
+        const { ensureCurrentUserHasRole } = await import('@/lib/actions/role-actions')
+        await ensureCurrentUserHasRole('vendor')
         // Redirect to vendor onboarding
         router.push('/onboarding/vendor')
       } else {
@@ -190,6 +193,8 @@ function VendorSignupContent() {
         if (authConfig.requirePhoneVerification) {
           setStep('phone_verify')
         } else {
+          const { ensureCurrentUserHasRole } = await import('@/lib/actions/role-actions')
+          await ensureCurrentUserHasRole('vendor')
           router.push('/onboarding/vendor')
         }
       } else {
@@ -204,6 +209,8 @@ function VendorSignupContent() {
     // Save phone number to database
     const { updatePhoneNumber } = await import('@/lib/actions/auth-actions')
     await updatePhoneNumber(verifiedPhone)
+    const { ensureCurrentUserHasRole } = await import('@/lib/actions/role-actions')
+    await ensureCurrentUserHasRole('vendor')
     // Redirect to vendor onboarding
     router.push('/onboarding/vendor')
   }

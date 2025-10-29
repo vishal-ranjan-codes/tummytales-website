@@ -11,7 +11,8 @@ export async function middleware(request: NextRequest) {
   
   // Protected routes (require authentication)
   const dashboardRoutes = ['/customer', '/vendor', '/rider', '/admin', '/account']
-  const protectedRoutes = [...dashboardRoutes, '/homechefs']
+  // Make /homechefs public by NOT including it in protectedRoutes
+  const protectedRoutes = [...dashboardRoutes]
   const authRoutes = ['/login', '/signup']
   const onboardingRoutes = ['/onboarding/customer', '/onboarding/vendor', '/onboarding/rider']
   

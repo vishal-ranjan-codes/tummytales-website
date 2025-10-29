@@ -9,6 +9,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  // Preserve intended role from the initiating page (e.g., signup/vendor => role=vendor)
+  const desiredRole = requestUrl.searchParams.get('role') as
+    | 'customer'
+    | 'vendor'
+    | 'rider'
+    | 'admin'
+    | null
   const error = requestUrl.searchParams.get('error')
   const error_description = requestUrl.searchParams.get('error_description')
   
@@ -63,9 +70,11 @@ export async function GET(request: NextRequest) {
       })
       
       if (!profile) {
-        // New OAuth user - redirect to customer signup to complete profile
-        console.log('✅ [OAuth Callback] New user, redirecting to signup')
-        return NextResponse.redirect(`${requestUrl.origin}/signup/customer?oauth=true`)
+        // New OAuth user - redirect to intended role's signup to complete profile
+        // Fall back to customer if no role intent provided
+        const targetRole = desiredRole || 'customer'
+        console.log(`✅ [OAuth Callback] New user, redirecting to signup for role: ${targetRole}`)
+        return NextResponse.redirect(`${requestUrl.origin}/signup/${targetRole}?oauth=true`)
       }
       
       // Check if phone verification is required and not yet done
@@ -80,15 +89,15 @@ export async function GET(request: NextRequest) {
       
       if (needsPhoneVerification && !profile.onboarding_completed) {
         // Redirect to signup page with OAuth flag to collect phone
-        const role = profile.roles?.[0] || 'customer'
+        const role = desiredRole || profile.roles?.[0] || 'customer'
         console.log(`✅ [OAuth Callback] Redirecting to /signup/${role}?oauth=true for phone verification`)
         return NextResponse.redirect(`${requestUrl.origin}/signup/${role}?oauth=true&verify_phone=true`)
       }
       
       // Check if onboarding is complete
       if (!profile.onboarding_completed) {
-        // Redirect to appropriate onboarding
-        const role = profile.roles?.[0] || 'customer'
+        // Redirect to appropriate onboarding (respect intended role if provided)
+        const role = desiredRole || profile.roles?.[0] || 'customer'
         console.log(`✅ [OAuth Callback] Redirecting to /onboarding/${role}`)
         return NextResponse.redirect(`${requestUrl.origin}/onboarding/${role}`)
       }
