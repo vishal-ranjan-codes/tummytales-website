@@ -19,6 +19,12 @@ export interface UserProfile {
   phone_verified: boolean
   auth_provider: string
   onboarding_completed: boolean
+  date_of_birth: string | null
+  gender: string | null
+  emergency_contact: { name: string; phone: string } | null
+  notification_preferences: { email: boolean; sms: boolean; push: boolean } | null
+  account_status: string
+  deleted_at: string | null
   created_at: string
   updated_at: string
 }

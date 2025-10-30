@@ -90,7 +90,6 @@ export default function RoleSwitcher() {
         {roles.map((role) => {
           const Icon = roleIcons[role]
           const isCurrent = role === currentRole
-          const colorClass = getRoleColor(role)
           
           return (
             <DropdownMenuItem
@@ -118,7 +117,7 @@ export default function RoleSwitcher() {
  * Simple Role Badge Component
  * Shows current role as a badge
  */
-export function RoleBadge() {
+export function RoleBadge({ role, showIcon = true }: { role?: UserRole; showIcon?: boolean }) {
   const { currentRole, loading } = useAuth()
   const [isHydrated, setIsHydrated] = useState(false)
 
@@ -126,17 +125,19 @@ export function RoleBadge() {
     setIsHydrated(true)
   }, [])
 
-  if (loading || !isHydrated || !currentRole) {
+  const effectiveRole = role ?? currentRole
+
+  if (loading || !isHydrated || !effectiveRole) {
     return null
   }
 
-  const Icon = roleIcons[currentRole]
-  const colorClass = getRoleColor(currentRole)
+  const Icon = roleIcons[effectiveRole]
+  const colorClass = getRoleColor(effectiveRole)
 
   return (
     <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
-      <Icon className="w-3 h-3" />
-      <span>{getRoleDisplayName(currentRole)}</span>
+      {showIcon && <Icon className="w-3 h-3" />}
+      <span>{getRoleDisplayName(effectiveRole)}</span>
     </div>
   )
 }
