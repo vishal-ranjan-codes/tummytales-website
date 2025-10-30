@@ -18,13 +18,22 @@ import { AccountTab } from '@/app/components/account/tabs/AccountTab'
 import { User, Shield, MapPin, Bell, Users, Settings, ChevronRight, ArrowLeft } from 'lucide-react'
 import { useBreakpoint } from '@/lib/hooks/useBreakpoint'
 import { cn } from '@/lib/utils'
+import { Suspense } from 'react'
 
 export default function AccountPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-100" /></div>}>
+      <AccountPageInner />
+    </Suspense>
+  )
+}
+
+function AccountPageInner() {
   const { profile, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams?.get('tab') as TabId|null
-  const isMobile = useBreakpoint('md', 'down') // true if screen < md (768px)
+  const isMobile = useBreakpoint('md', 'down')
   const [mobileBackAnimKey, setMobileBackAnimKey] = useState(0)
 
   const tabs = [
@@ -36,7 +45,6 @@ export default function AccountPage() {
     { id: 'account' as TabId, label: 'Account', icon: <Settings className="w-5 h-5" /> }
   ]
 
-  // Desktop tab state
   const [activeTab, setActiveTab] = useState<TabId>('profile')
 
   const renderTabContent = (tab: TabId) => {
@@ -58,10 +66,9 @@ export default function AccountPage() {
     }
   }
 
-  // Mobile back handler
   const handleMobileBack = useCallback(() => {
     router.replace('/account', {scroll: false})
-    setMobileBackAnimKey(prev => prev + 1) // force re-mount for animation if needed
+    setMobileBackAnimKey(prev => prev + 1)
   }, [router])
 
   if (loading) {
@@ -81,9 +88,7 @@ export default function AccountPage() {
     )
   }
 
-  // --- MOBILE LAYOUT ---
   if (isMobile) {
-    // 1: Section list (no tab param)
     if (!tabParam) {
       return (
         <div className="max-w-md mx-auto px-2 py-8">
@@ -113,7 +118,6 @@ export default function AccountPage() {
         </div>
       )
     }
-    // 2: Section view (tab param)
     const section = tabs.find(t => t.id === tabParam)
     return (
       <div className="min-h-[60vh] max-w-md mx-auto px-2 py-4 animate-fadein relative" key={mobileBackAnimKey}>
@@ -136,7 +140,6 @@ export default function AccountPage() {
     )
   }
 
-  // --- DESKTOP LAYOUT ---
   return (
     <div className="space-y-8">
       <div className="text-center">
