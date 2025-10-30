@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, photo_url: publicUrl })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
   }
 }
@@ -114,7 +114,7 @@ export async function DELETE() {
     }
 
     return NextResponse.json({ success: true })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
   }
 }
