@@ -12,7 +12,7 @@ import RoleSwitcher, { RoleBadge, RoleStatus } from '@/lib/components/auth/RoleS
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
+// import { Separator } from '@/components/ui/separator'
 import { Loader2, LogIn, LogOut, User, Shield, Store, Bike, Users, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -21,7 +21,7 @@ export default function TestAuthSystemPage() {
     user, 
     profile, 
     roles, 
-    currentRole, 
+    // currentRole, 
     loading, 
     signInWithOAuth, 
     signOut, 
@@ -361,7 +361,7 @@ export default function TestAuthSystemPage() {
                     <div className="text-center">
                       <Users className="w-8 h-8 text-blue-600 mx-auto mb-2" />
                       <h3 className="font-medium text-blue-900">Currently in Customer Mode</h3>
-                      <p className="text-sm text-blue-700">You're viewing the app as a customer</p>
+                      <p className="text-sm text-blue-700">You&apos;re viewing the app as a customer</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -373,7 +373,7 @@ export default function TestAuthSystemPage() {
                     <div className="text-center">
                       <Store className="w-8 h-8 text-green-600 mx-auto mb-2" />
                       <h3 className="font-medium text-green-900">Currently in Vendor Mode</h3>
-                      <p className="text-sm text-green-700">You're managing your kitchen</p>
+                      <p className="text-sm text-green-700">You&apos;re managing your kitchen</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -385,7 +385,7 @@ export default function TestAuthSystemPage() {
                     <div className="text-center">
                       <Bike className="w-8 h-8 text-purple-600 mx-auto mb-2" />
                       <h3 className="font-medium text-purple-900">Currently in Rider Mode</h3>
-                      <p className="text-sm text-purple-700">You're ready for deliveries</p>
+                      <p className="text-sm text-purple-700">You&apos;re ready for deliveries</p>
                     </div>
                   </CardContent>
                 </Card>

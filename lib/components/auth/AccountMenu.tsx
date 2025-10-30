@@ -27,7 +27,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { 
-  User, 
   Settings, 
   LayoutDashboard, 
   ShoppingBag, 
@@ -35,7 +34,6 @@ import {
   Truck, 
   Users, 
   LogOut,
-  X,
   ChevronDown
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -57,6 +55,8 @@ const roleDashboards: Record<UserRole, string> = {
   rider: '/rider',
   admin: '/admin',
 }
+
+type MenuItem = { label: string; icon: React.ElementType; href: string }
 
 export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
   const { user, profile, currentRole, roles, signOut } = useAuth()
@@ -150,12 +150,12 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
 
   const menuItems = getRoleSpecificMenuItems()
 
-  const renderMenuItem = (item: any, onClick?: () => void) => (
+  const renderMenuItem = (item: MenuItem, onClick?: () => void) => (
     <Link
       key={item.href}
       href={item.href}
       onClick={onClick}
-      className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+      className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors cursor-pointer"
     >
       <item.icon className="w-4 h-4" />
       <span>{item.label}</span>
@@ -184,13 +184,6 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 <span>Account Menu</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
               </DialogTitle>
             </DialogHeader>
 
@@ -235,7 +228,7 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
                             key={role}
                             href={roleDashboards[role]}
                             onClick={() => setIsMobileMenuOpen(false)}
-                            className={`flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+                            className={`flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors cursor-pointer ${
                               isActive 
                                 ? 'bg-primary/10 text-primary' 
                                 : 'hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -284,7 +277,7 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
           <ChevronDown className="w-4 h-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 z-[100]">
         <DropdownMenuLabel className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">
@@ -319,7 +312,7 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
                 <DropdownMenuItem key={role} asChild disabled={isActive}>
                   <Link
                     href={roleDashboards[role]}
-                    className={`flex items-center gap-2 ${isActive ? 'opacity-50' : ''}`}
+                    className={`flex items-center gap-2 cursor-pointer ${isActive ? 'opacity-50' : ''}`}
                   >
                     <Icon className="w-4 h-4" />
                     <span>{getRoleDisplayName(role)}</span>

@@ -10,13 +10,15 @@ import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { UserRole, UserProfile } from '@/lib/auth/role-types'
 
+type OAuthProvider = 'google' | 'facebook' | 'apple' | 'github' | 'bitbucket'
+
 interface AuthContextType {
   user: User | null
   profile: UserProfile | null
   roles: UserRole[]
   currentRole: UserRole | null
   loading: boolean
-  signInWithOAuth: (provider: string) => Promise<void>
+  signInWithOAuth: (provider: OAuthProvider) => Promise<void>
   signInWithOtp: (phone: string) => Promise<void>
   signOut: () => Promise<void>
   switchRole: (role: UserRole) => Promise<void>
@@ -34,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
 
   // Computed values
-  const roles = profile?.roles ?? []
+  const roles = useMemo(() => profile?.roles ?? [], [profile?.roles])
   const currentRole = profile?.last_used_role || profile?.default_role || roles[0] || null
   const isAuthenticated = !!user
 
@@ -60,10 +62,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   // Auth actions
-  const signInWithOAuth = useCallback(async (provider: string) => {
+  const signInWithOAuth = useCallback(async (provider: OAuthProvider) => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: provider as any,
+        provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`
         }

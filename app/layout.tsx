@@ -25,11 +25,11 @@ export default function RootLayout({
       </head>
       <body className={`theme-fc-base theme-bg-color ${ inter.className }`}>
         <AuthProvider>
-          <div className="site" id="page">
-            <Header/>
-              {children}
-            <Footer/>
-          </div>
+        <div className="site" id="page">
+          <Header/>
+            {children}
+          <Footer/>
+        </div>
         </AuthProvider>
       </body>
     </html>
