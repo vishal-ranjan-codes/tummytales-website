@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { User, Settings, LogOut, Menu } from 'lucide-react'
+import { Settings, LogOut, Menu } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface DashboardHeaderProps {
