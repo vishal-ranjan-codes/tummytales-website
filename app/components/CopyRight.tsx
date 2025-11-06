@@ -9,5 +9,5 @@ export default function Copyright() {
     setCurrentYear(new Date().getFullYear())
   }, [])
 
-  return <div id="colophon" className="site-info py-3 text-xs text-fc-light text-center">COPYRIGHT © {currentYear} Tummy Tales - All rights reserved.</div>
+  return <div id="colophon" className="site-info py-3 text-xs text-fc-light text-center">COPYRIGHT © {currentYear} BellyBox - All rights reserved.</div>
 }

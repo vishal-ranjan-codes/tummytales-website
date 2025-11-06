@@ -6,7 +6,7 @@
 import { Metadata } from 'next'
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tummytales.com'
-const siteName = 'Tummy Tales'
+const siteName = 'BellyBox'
 
 interface PageMetadataParams {
   title: string

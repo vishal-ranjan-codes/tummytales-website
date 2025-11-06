@@ -7,6 +7,7 @@
 - Next.js 15 + Supabase infrastructure configured
 - UI component library (shadcn/ui) ready
 - **Phone Auth Provider enabled in Supabase with Twilio integration**
+- **Cloudflare R2 configured as primary object storage (tt-public, tt-private)**
 - **No authentication flows, database schema, or dashboards exist yet**
 
 ---
@@ -59,11 +60,28 @@
 - `ratings` - Vendor ratings (scaffold for later)
 - `rider_docs` - Rider documents (scaffold for later)
 
-**Storage buckets**:
+**Object storage (Cloudflare R2)**:
 
-- `vendor-media` (public)
-- `vendor-docs` (private)
-- `rider-docs` (private)
+- `tt-public` (public): vendor profile/cover, gallery, menu images, intro videos, user avatars
+- `tt-private` (private): vendor docs (FSSAI/KYC), rider docs (DL/Aadhaar), order proofs
+
+Notes:
+- Public served via custom R2 domain with cache-control; private via presigned GET.
+- Browser uploads via presigned PUT (Next.js API generates URLs).
+- Supabase Storage retained as optional secondary for small files; default is R2.
+
+Folder/key conventions (use these when building features):
+- `tt-public`:
+  - `profile-photos/{userId}/profile.{ext}`
+  - `vendor-media/{vendorId}/profile|cover.{ext}`
+  - `vendor-media/{vendorId}/gallery/{uuid}.{ext}`
+  - `menu-photos/{vendorId}/{mealId}.{ext}`
+- `tt-private`:
+  - `vendor-docs/{vendorId}/{docType}.{ext}`
+  - `rider-docs/{riderId}/{docType}.{ext}`
+  - `order-proofs/{orderId}/{timestamp}.{ext}`
+
+Implementation rule: Presign PUT route composes/validates keys from `category` + authenticated user/vendor; clients pass `filename` and `category`.
 
 **Files**: Create migration in `supabase/migrations/` with full schema + RLS policies
 
@@ -566,6 +584,8 @@ Refer to these for detailed implementation information.
 - Preview public vendor page
 - SEO: Custom meta description for vendor page
 
+**Storage**: Use R2 `tt-public` for images/videos with presigned PUT from the browser; save object keys in DB and build public URLs via custom domain.
+
 **Files**:
 
 - `app/(dashboard)/vendor/profile/page.tsx`
@@ -638,8 +658,8 @@ Refer to these for detailed implementation information.
 - `/admin/vendors` - List with filters (status, zone, kyc_status)
 - `/admin/vendor/[id]` - Vendor detail with:
   - All profile fields
-  - Private docs viewer (signed URLs)
-  - Media previews
+  - Private docs viewer (R2 presigned GET)
+  - Media previews (public R2 URLs)
   - Meals summary
   - Action buttons: Approve, Reject (with reason), Suspend, Set Unavailable
 - Approval flow: Sets `kyc_status=approved`, `status=active`, generates slug
@@ -751,6 +771,7 @@ Refer to these for detailed implementation information.
   - Check vendor capacity
   - Create `orders` row with status `scheduled`
 - Send preparation notification to vendor
+- If capture of proof photos is enabled, store to R2 `tt-private`; serve via presigned GET.
 - Send reminder to customer
 
 **Files**:

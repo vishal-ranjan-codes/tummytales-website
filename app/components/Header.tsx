@@ -8,8 +8,9 @@ import HeaderLogo from "./HeaderLogo"
 import { Button } from '@/components/ui/button'
 import { getCurrentSection } from '@/lib/utils/scroll'
 import { navigateToSection, handleHashNavigation } from '@/lib/utils/navigation'
-import { useAuth } from '@/lib/contexts/AuthContext'
 import AccountMenu from '@/lib/components/auth/AccountMenu'
+import { useAuth } from '@/lib/contexts/AuthContext'
+import type { InitialAuth } from '@/lib/auth/types'
 
 // Define rules for transparent headers
 const transparentRules: Array<{ path: string; exact?: boolean }> = [
@@ -18,6 +19,13 @@ const transparentRules: Array<{ path: string; exact?: boolean }> = [
 
 // Define rules for full-width headers
 const fullWidthRules: Array<{ path: string; exact?: boolean }> = []
+
+// Define rules for hidden headers (pages with their own headers)
+const hiddenRules: Array<{ path: string; exact?: boolean }> = [
+  { path: '/vendor' },
+  { path: '/rider' },
+  { path: '/admin' },
+]
 
 function isTransparentPath(pathname: string): boolean {
   for (const rule of transparentRules) {
@@ -41,23 +49,46 @@ function isFullWidthPath(pathname: string): boolean {
   return false
 }
 
-export default function Header() {
+function isHiddenPath(pathname: string): boolean {
+  for (const rule of hiddenRules) {
+    if (rule.exact) {
+      if (pathname === rule.path) return true
+    } else if (pathname.startsWith(rule.path)) {
+      return true
+    }
+  }
+  return false
+}
+
+export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { isAuthenticated, loading } = useAuth()
+  // Get client auth state for live updates (login/logout)
+  const { isAuthenticated: clientIsAuthenticated, isReady: authIsReady } = useAuth()
+  // Priority: Use client state if auth context is ready and has a value, otherwise use server state
+  // This ensures we show the correct state immediately from server, then update when client loads
+  // If client is ready and says authenticated, use that; if client is ready and says not authenticated, use that
+  // If client is not ready yet, use server state
+  const isAuthenticated = (authIsReady && typeof clientIsAuthenticated !== 'undefined') 
+    ? clientIsAuthenticated 
+    : initialAuth.isAuthenticated
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isTransparent, setIsTransparent] = useState(() => isTransparentPath(pathname))
-  const [isFullWidth, setIsFullWidth] = useState(() => isFullWidthPath(pathname))
+  // Initialize with defaults to avoid SSR issues with usePathname
+  const [isTransparent, setIsTransparent] = useState(false)
+  const [isFullWidth, setIsFullWidth] = useState(false)
+  const [isHidden, setIsHidden] = useState(false)
   const [isClient, setIsClient] = useState(false)
   const [activeSection, setActiveSection] = useState<string | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
-  const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
-    setIsHydrated(true)
-    setIsTransparent(isTransparentPath(pathname))
-    setIsFullWidth(isFullWidthPath(pathname))
+    // Update state after client-side hydration
+    if (pathname) {
+      setIsTransparent(isTransparentPath(pathname))
+      setIsFullWidth(isFullWidthPath(pathname))
+      setIsHidden(isHiddenPath(pathname))
+    }
 
     // Handle hash navigation on load
     handleHashNavigation()
@@ -98,6 +129,11 @@ export default function Header() {
 
   const isHomepage = pathname === '/'
 
+  // Hide header on dashboard pages (they have their own headers)
+  if (isHidden) {
+    return null
+  }
+
   return (
     <header 
       itemType="http://schema.org/WPHeader"
@@ -126,7 +162,7 @@ export default function Header() {
                     <a 
                       href="#how-it-works" 
                       onClick={(e) => handleSectionClick(e, 'how-it-works')}
-                      className={`nav-menu-item ${activeSection === 'how-it-works' ? "theme-text-primary-color-100" : ""}`}
+                      className={`nav-menu-item ${activeSection === 'how-it-works' ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
                     >
                       How It Works
                     </a>
@@ -135,7 +171,7 @@ export default function Header() {
                     <a 
                       href="#consumers" 
                       onClick={(e) => handleSectionClick(e, 'consumers')}
-                      className={`nav-menu-item ${activeSection === 'consumers' ? "theme-text-primary-color-100" : ""}`}
+                      className={`nav-menu-item ${activeSection === 'consumers' ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
                     >
                       For Consumers
                     </a>
@@ -144,7 +180,7 @@ export default function Header() {
                     <a 
                       href="#vendors" 
                       onClick={(e) => handleSectionClick(e, 'vendors')}
-                      className={`nav-menu-item ${activeSection === 'vendors' ? "theme-text-primary-color-100" : ""}`}
+                      className={`nav-menu-item ${activeSection === 'vendors' ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
                     >
                       For Vendors
                     </a>
@@ -153,7 +189,7 @@ export default function Header() {
                     <a 
                       href="#riders" 
                       onClick={(e) => handleSectionClick(e, 'riders')}
-                      className={`nav-menu-item ${activeSection === 'riders' ? "theme-text-primary-color-100" : ""}`}
+                      className={`nav-menu-item ${activeSection === 'riders' ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
                     >
                       For Riders
                     </a>
@@ -186,7 +222,7 @@ export default function Header() {
               <li className={`menu-item flex justify-start items-center relative ${pathname === "/about" ? "current-menu-item" : ""}`}>
                 <Link 
                   href="/about" 
-                  className={`nav-menu-item ${pathname === "/about" ? "theme-text-primary-color-100" : ""}`}
+                  className={`nav-menu-item ${pathname === "/about" ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
                 >
                   About
                 </Link>
@@ -194,7 +230,7 @@ export default function Header() {
               <li className={`menu-item flex justify-start items-center relative ${pathname === "/contact" ? "current-menu-item" : ""}`}>
                 <Link 
                   href="/contact" 
-                  className={`nav-menu-item ${pathname === "/contact" ? "theme-text-primary-color-100" : ""}`}
+                  className={`nav-menu-item ${pathname === "/contact" ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
                 >
                   Contact
                 </Link>
@@ -208,13 +244,7 @@ export default function Header() {
             className="secondary-navigation hidden lg:flex gap-3 items-center"
             aria-label="User navigation"
           >
-            {!isHydrated || loading ? (
-              // Show loading state during SSR and hydration
-              <>
-                <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
-                <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
-              </>
-            ) : !isAuthenticated ? (
+            {!isAuthenticated ? (
               // Show login/signup when not authenticated
               <>
                 <Link href="/login">
@@ -232,7 +262,7 @@ export default function Header() {
                     variant="primary-dark-white" 
                     size="sm" 
                     className="text-sm min-w-[80px]"
-                    aria-label="Sign up for Tummy Tales"
+                    aria-label="Sign up for BellyBox"
                   >
                     Sign Up
                   </Button>
@@ -240,19 +270,25 @@ export default function Header() {
               </>
             ) : (
               // Show account menu when authenticated
-              <AccountMenu variant="desktop" />
+              <AccountMenu 
+                variant="desktop" 
+                initialProfile={
+                  initialAuth.isAuthenticated && initialAuth.profile ? {
+                    full_name: initialAuth.profile.full_name,
+                    photo_url: initialAuth.profile.photo_url,
+                    currentRole: initialAuth.profile.currentRole,
+                  } : undefined
+                }
+                initialUser={
+                  initialAuth.isAuthenticated ? initialAuth.user : undefined
+                }
+              />
             )}
           </nav>
 
           {/* Mobile: Buttons + Menu Toggle */}
           <div className='flex gap-3 items-center lg:hidden'>
-            {!isHydrated || loading ? (
-              // Show loading state during SSR and hydration
-              <>
-                <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
-                <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
-              </>
-            ) : !isAuthenticated ? (
+            {!isAuthenticated ? (
               // Show login/signup when not authenticated
               <>
                 <Link href="/login">
@@ -270,7 +306,7 @@ export default function Header() {
                     variant="primary-dark-white" 
                     size="sm" 
                     className="text-sm"
-                    aria-label="Sign up for Tummy Tales"
+                    aria-label="Sign up for BellyBox"
                   >
                     Sign Up
                   </Button>
@@ -278,14 +314,26 @@ export default function Header() {
               </>
             ) : (
               // Show account menu when authenticated
-              <AccountMenu variant="mobile" />
+              <AccountMenu 
+                variant="mobile" 
+                initialProfile={
+                  initialAuth.isAuthenticated && initialAuth.profile ? {
+                    full_name: initialAuth.profile.full_name,
+                    photo_url: initialAuth.profile.photo_url,
+                    currentRole: initialAuth.profile.currentRole,
+                  } : undefined
+                }
+                initialUser={
+                  initialAuth.isAuthenticated ? initialAuth.user : undefined
+                }
+              />
             )}
 
             <button 
               onClick={toggleMenu} 
               className="theme-fc-base hover:theme-fc-heading transition-all duration-300 cursor-pointer p-2 -mr-2"
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={isMenuOpen}
+              
               aria-controls="mobile-menu"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -403,17 +451,7 @@ export default function Header() {
               </li>
 
               {/* Mobile Signup Options */}
-              {!isHydrated || loading ? (
-                // Show loading state during SSR and hydration
-                <li className="menu-item pt-4 border-t theme-border-color-light">
-                  <div className="animate-pulse bg-gray-200 h-4 w-24 rounded mb-3"></div>
-                  <div className="flex flex-col gap-2">
-                    <div className="animate-pulse bg-gray-200 h-8 w-full rounded"></div>
-                    <div className="animate-pulse bg-gray-200 h-8 w-full rounded"></div>
-                    <div className="animate-pulse bg-gray-200 h-8 w-full rounded"></div>
-                  </div>
-                </li>
-              ) : !isAuthenticated ? (
+              {!isAuthenticated ? (
                 // Show signup options when not authenticated
                 <li className="menu-item pt-4 border-t theme-border-color-light">
                   <p className="text-xs font-semibold uppercase theme-fc-light mb-3 tracking-wider">Get Started</p>

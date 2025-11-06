@@ -5,7 +5,7 @@
  * Filters for vendor discovery (zone, veg-only, rating)
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getActiveZones } from '@/lib/data/zones'
 import { Button } from '@/components/ui/button'
 import { Filter, X } from 'lucide-react'
@@ -24,6 +24,7 @@ export default function VendorFilters({ onFilterChange }: VendorFiltersProps) {
   const [vegOnly, setVegOnly] = useState(false)
   const [minRating, setMinRating] = useState<number>(0)
   const [showFilters, setShowFilters] = useState(false)
+  const prevFiltersRef = useRef<string>('')
   
   // Fetch zones on mount
   useEffect(() => {
@@ -34,13 +35,20 @@ export default function VendorFilters({ onFilterChange }: VendorFiltersProps) {
     fetchZones()
   }, [])
   
-  // Apply filters
+  // Apply filters only when they actually change
   useEffect(() => {
-    onFilterChange({
+    const newFilters = {
       zoneId: selectedZone || undefined,
       vegOnly: vegOnly || undefined,
       minRating: minRating > 0 ? minRating : undefined
-    })
+    }
+    const filtersKey = JSON.stringify(newFilters)
+    
+    // Only call onFilterChange if filters actually changed
+    if (prevFiltersRef.current !== filtersKey) {
+      prevFiltersRef.current = filtersKey
+      onFilterChange(newFilters)
+    }
   }, [selectedZone, vegOnly, minRating, onFilterChange])
   
   const handleClearFilters = () => {

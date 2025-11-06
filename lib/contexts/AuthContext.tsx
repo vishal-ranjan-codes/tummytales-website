@@ -18,6 +18,7 @@ interface AuthContextType {
   roles: UserRole[]
   currentRole: UserRole | null
   loading: boolean
+  isReady: boolean // True when auth is initialized AND (user+profile ready OR no user)
   signInWithOAuth: (provider: OAuthProvider) => Promise<void>
   signInWithOtp: (phone: string) => Promise<void>
   signOut: () => Promise<void>
@@ -33,12 +34,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [profileFetchAttempted, setProfileFetchAttempted] = useState(false)
   const supabase = createClient()
 
   // Computed values
   const roles = useMemo(() => profile?.roles ?? [], [profile?.roles])
   const currentRole = profile?.last_used_role || profile?.default_role || roles[0] || null
   const isAuthenticated = !!user
+  
+  // isReady: True when loading is false AND initialization is complete
+  // For authenticated users, we wait for profile fetch to be attempted (even if it fails)
+  // This prevents infinite loading when profile fetch fails
+  const isReady = useMemo(() => {
+    if (loading) return false
+    if (!isInitialized) return false
+    
+    // If no user, we're ready
+    if (user === null) return true
+    
+    // If user exists, we're ready only after profile fetch has been attempted
+    // (whether it succeeded or failed)
+    return profileFetchAttempted
+  }, [loading, isInitialized, user, profileFetchAttempted])
 
   // Fetch user profile
   const fetchProfile = useCallback(async (userId: string) => {
@@ -58,6 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error in fetchProfile:', error)
       setProfile(null)
+    } finally {
+      // Mark that profile fetch has been attempted (even if it failed)
+      setProfileFetchAttempted(true)
     }
   }, [supabase])
 
@@ -145,6 +165,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session?.user ?? null)
           if (session?.user) {
             await fetchProfile(session.user.id)
+          } else {
+            // No user, so no profile fetch needed
+            setProfileFetchAttempted(true)
           }
           setLoading(false)
           setIsInitialized(true)
@@ -152,6 +175,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Auth initialization error:', error)
         if (mounted) {
+          // Even on error, mark profile fetch as attempted
+          setProfileFetchAttempted(true)
           setLoading(false)
           setIsInitialized(true)
         }
@@ -171,6 +196,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await fetchProfile(session.user.id)
         } else {
           setProfile(null)
+          // No user, so no profile fetch needed
+          setProfileFetchAttempted(true)
         }
         
         setLoading(false)
@@ -217,6 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     roles,
     currentRole,
     loading,
+    isReady,
     signInWithOAuth,
     signInWithOtp,
     signOut,
@@ -229,6 +257,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     roles,
     currentRole,
     loading,
+    isReady,
     signInWithOAuth,
     signInWithOtp,
     signOut,

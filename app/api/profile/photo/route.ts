@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { r2Client, r2Buckets, r2PublicBaseUrl } from '@/lib/r2'
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
 export const runtime = 'nodejs'
 
@@ -31,19 +33,18 @@ export async function POST(request: Request) {
     }
 
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
-    const objectPath = `${user.id}/profile.${ext}`
+    const key = `profile-photos/${user.id}/profile.${ext}`
 
-    const { error: uploadError } = await supabase.storage
-      .from('profile-photos')
-      .upload(objectPath, file, { upsert: true, cacheControl: '3600' })
+    const arrayBuffer = await file.arrayBuffer()
+    await r2Client.send(new PutObjectCommand({
+      Bucket: r2Buckets.public,
+      Key: key,
+      Body: Buffer.from(arrayBuffer),
+      ContentType: file.type,
+      CacheControl: process.env.R2_DEFAULT_PUBLIC_CACHE_CONTROL || 'public, max-age=3600, s-maxage=3600',
+    }))
 
-    if (uploadError) {
-      return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 })
-    }
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from('profile-photos').getPublicUrl(objectPath)
+    const publicUrl = r2PublicBaseUrl ? `${r2PublicBaseUrl}/${key}` : ''
 
     const { error: updateError } = await supabase
       .from('profiles')
@@ -84,24 +85,20 @@ export async function DELETE() {
 
     if (profile?.photo_url) {
       try {
-        const url = new URL(profile.photo_url)
-        // Public URL format contains '/object/public/<bucket>/<path>'
-        const parts = url.pathname.split('/object/public/')
-        let objectPath: string | null = null
-        if (parts.length === 2) {
-          const after = parts[1]
-          const idx = after.indexOf('/')
-          if (idx !== -1) {
-            // bucket = after.slice(0, idx)
-            objectPath = after.slice(idx + 1)
-          }
-        }
-        if (objectPath) {
+        if (r2PublicBaseUrl && profile.photo_url.startsWith(r2PublicBaseUrl)) {
+          const url = new URL(profile.photo_url)
+          // Pathname like: /profile-photos/{userId}/profile.ext
+          const keyToDelete = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname
+          await r2Client.send(new DeleteObjectCommand({ Bucket: r2Buckets.public, Key: keyToDelete }))
+        } else {
+          // legacy supabase cleanup best-effort
+          const url = new URL(profile.photo_url)
+          const pathParts = url.pathname.split('/')
+          const fileName = pathParts[pathParts.length - 1]
+          const objectPath = `${user.id}/${fileName}`
           await supabase.storage.from('profile-photos').remove([objectPath])
         }
-      } catch {
-        // ignore parse failures
-      }
+      } catch {}
     }
 
     const { error: updateError } = await supabase

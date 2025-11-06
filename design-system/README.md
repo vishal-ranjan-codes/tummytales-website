@@ -59,4 +59,4 @@ See the main `DESIGN_SYSTEM.md` file for detailed customization instructions.
 
 ## License
 
-This design system is part of the TummyTales project and follows the same license terms.
+This design system is part of the BellyBox project and follows the same license terms.

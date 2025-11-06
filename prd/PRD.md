@@ -138,7 +138,7 @@ Differentiators vs Swiggy/Zomato:
 **Stack (conceptual):**
 
 - **Frontend:** Next.js (App Router), Tailwind, shadcn/ui.
-- **Backend:** Supabase (Postgres, Auth, RLS, Realtime, Storage).
+- **Backend:** Supabase (Postgres, Auth, RLS, Realtime). Storage via **Cloudflare R2** (S3-compatible) as primary; Supabase Storage optional secondary.
 - **Auth:** Phone OTP via Supabase Phone Provider + Twilio SMS.
 - **Payments (Phase 2+):** Razorpay (Subscriptions/Orders).
 - **Maps (Phase 1+):** Google Maps Places/Geocoding.
@@ -150,7 +150,7 @@ Differentiators vs Swiggy/Zomato:
 2. On first login, create `profiles` row (default role `consumer` unless coming from Vendor/Rider signup).
 3. Role-specific signup creates linked row in `vendors` or `riders`.
 4. RLS gates reads/writes by **role + ownership**; Admin bypasses through privileged server actions.
-5. Storage buckets hold images/videos/docs; public vendor assets are separate from sensitive docs.
+5. Object storage in **Cloudflare R2** holds images/videos/docs; public vendor assets are separate from sensitive docs. Supabase Storage is retained only as an optional fallback for small files.
 
 ---
 
@@ -490,10 +490,30 @@ When `REQUIRE_PHONE_VERIFICATION=true` and user signs up via OAuth or Email:
 
 ## D) Storage Buckets & Asset Policy
 
-- **`vendor-media`** (public): profile, cover, gallery, intro video.
-- **`vendor-docs`** (private): FSSAI/KYC documents.
-- **`rider-docs`** (private): DL/Aadhaar.
-- **`order-proofs`** (private): delivery photos/signatures.
+Primary storage: **Cloudflare R2**
+
+- **`tt-public` (R2, public)**: vendor profile/cover, gallery, menu images, intro videos, user profile photos.
+- **`tt-private` (R2, private)**: vendor documents (FSSAI/KYC), rider documents (DL/Aadhaar), order proofs.
+
+Access patterns:
+- Public assets are served via custom domain (e.g., `https://assets.tummytales.example/{key}`) from `tt-public` with cache-control.
+- Private assets are accessed via short-lived presigned GET URLs (60–600s) from `tt-private`.
+- Uploads use browser → R2 direct presigned PUT (via Next.js API to generate URLs). Server-side uploads are allowed for fallbacks.
+- Supabase Storage may be used later for select small files; default route is R2.
+
+Folder/key conventions (apply to all new features):
+- `tt-public`
+  - `profile-photos/{userId}/profile.{ext}`
+  - `vendor-media/{vendorId}/profile.{ext}`
+  - `vendor-media/{vendorId}/cover.{ext}`
+  - `vendor-media/{vendorId}/gallery/{uuid}.{ext}`
+  - `menu-photos/{vendorId}/{mealId}.{ext}`
+- `tt-private`
+  - `vendor-docs/{vendorId}/{docType}.{ext}`
+  - `rider-docs/{riderId}/{docType}.{ext}`
+  - `order-proofs/{orderId}/{timestamp}.{ext}`
+
+Server presign endpoint enforces allowed prefixes and user/vendor ownership where applicable.
 
 **Retention & size guidance:**
 
@@ -1055,7 +1075,8 @@ Each cycle must be modular, logged, and recoverable (idempotent jobs, auditable 
 | Integration | Purpose | Phase | Key Use |
 | --- | --- | --- | --- |
 | **Supabase Auth + Twilio SMS** | Phone OTP login & session mgmt | Phase 0 | `+91` OTP via Twilio; verify; persist session |
-| **Supabase Storage** | Host images, videos, KYC docs | Phase 0+ | Public bucket for vendor media; private for docs |
+| **Cloudflare R2 (primary)** | Host images, videos, KYC docs | Phase 0+ | `tt-public` for public media via CDN; `tt-private` for docs via presigned GET |
+| **Supabase Storage (optional)** | Secondary storage for small files | Phase 0+ | Retained as fallback; not default |
 | **Razorpay** | Payments & subscriptions | Phase 2 | Collect consumer fees; record transactions |
 | **Google Maps API** | Address autofill & zone detection | Phase 1 | Geocode user/vendor addresses; distance calc |
 | **Mixpanel / PostHog** | User & funnel analytics | All | Track auth events, role usage, retention |
@@ -1191,7 +1212,7 @@ SLAs target: > 95 % tickets closed < 24 h.
 
 1. **Supabase policies** are multi-tenant; zones partition data logically.
 2. **Postgres indexes** on hot fields (status, zone_id, date) keep queries < 100 ms.
-3. **Storage CDN** enabled for images / videos.
+3. **R2 public CDN/domain** enabled for images/videos; private files via presigned URLs.
 4. **Server actions** wrapped with timeouts and retries for idempotency.
 5. **Edge functions** for heavy jobs (nightly order generation, weekly payouts).
 6. **Horizontal scaling** ready via Supabase project replicas when Delhi NCR → multi-city.

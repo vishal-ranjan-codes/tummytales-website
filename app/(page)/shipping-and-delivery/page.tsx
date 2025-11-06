@@ -16,7 +16,7 @@ export default function ShippingPage() {
             <section className="mb-8 mt-8">
                 <h2 className="text-2xl theme-fc-heading-light">1. Overview</h2>
                 <p>
-                Tummy Tales provides food delivery services for home-cooked meals and tiffin subscriptions. 
+                BellyBox provides food delivery services for home-cooked meals and tiffin subscriptions. 
                 We deliver fresh, authentic meals prepared by local home chefs directly to your doorstep.
                 </p>
             </section>
@@ -111,7 +111,7 @@ export default function ShippingPage() {
             <section className="mb-8">
                 <h2 className="text-2xl theme-fc-heading-light">12. Refunds</h2>
                 <p>
-                Refunds are governed by our Refund Policy. Tummy Tales offers satisfaction guarantee for all orders. 
+                Refunds are governed by our Refund Policy. BellyBox offers satisfaction guarantee for all orders. 
                 See the Refund Policy page for full details.
                 </p>
             </section>
@@ -120,7 +120,7 @@ export default function ShippingPage() {
                 <h2 className="text-2xl theme-fc-heading-light">13. Need Help</h2>
                 <address className="not-italic">
                 <p>For delivery issues or order questions contact:</p>
-                <p><strong>Tummy Tales</strong></p>
+                <p><strong>BellyBox</strong></p>
                 <p>Food Tech Hub, Sector 25, Gurugram, Haryana, India</p>
                 <p>hello@tummytales.com</p>
                 </address>

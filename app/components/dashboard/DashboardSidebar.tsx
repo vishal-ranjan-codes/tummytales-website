@@ -1,119 +1,120 @@
 'use client'
 
 /**
- * Dashboard Sidebar Component
- * Navigation sidebar for dashboards
+ * Generic Dashboard Sidebar Component
+ * Reusable sidebar for all role dashboards using shadcn sidebar component
  */
 
+import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { UserRole } from '@/lib/auth/role-types'
-import { cn } from '@/lib/utils'
 import {
-  Home,
-  Users,
-  Store,
-  Bike,
-  Settings,
-  ShoppingBag,
-  Package,
-  DollarSign,
-  BarChart3,
-  FileText,
-  MapPin,
-  Utensils,
-} from 'lucide-react'
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar'
+import { LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import SidebarRoleSwitcher from './SidebarRoleSwitcher'
+import AccountDropdown from './AccountDropdown'
 
-interface NavItem {
+export interface MenuItem {
   label: string
   href: string
-  icon: React.ElementType
-}
-
-const roleNavItems: Record<UserRole, NavItem[]> = {
-  customer: [
-    { label: 'Dashboard', href: '/customer', icon: Home },
-    { label: 'Subscriptions', href: '/customer/subscriptions', icon: ShoppingBag },
-    { label: 'Orders', href: '/customer/orders', icon: Package },
-    { label: 'Settings', href: '/account', icon: Settings },
-  ],
-  vendor: [
-    { label: 'Dashboard', href: '/vendor', icon: Home },
-    { label: 'Onboarding', href: '/vendor/onboarding', icon: FileText },
-    { label: 'Profile', href: '/vendor/profile', icon: Store },
-    { label: 'Menu', href: '/vendor/menu', icon: Utensils },
-    { label: 'Orders', href: '/vendor/orders', icon: Package },
-    { label: 'Payouts', href: '/vendor/payouts', icon: DollarSign },
-    { label: 'Settings', href: '/account', icon: Settings },
-  ],
-  rider: [
-    { label: 'Dashboard', href: '/rider', icon: Home },
-    { label: 'Routes', href: '/rider/routes', icon: MapPin },
-    { label: 'Earnings', href: '/rider/earnings', icon: DollarSign },
-    { label: 'Settings', href: '/account', icon: Settings },
-  ],
-  admin: [
-    { label: 'Dashboard', href: '/admin', icon: Home },
-    { label: 'Users', href: '/admin/users', icon: Users },
-    { label: 'Vendors', href: '/admin/vendors', icon: Store },
-    { label: 'Riders', href: '/admin/riders', icon: Bike },
-    { label: 'Zones', href: '/admin/zones', icon: MapPin },
-    { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
-  ],
+  icon: LucideIcon
+  badge?: string
+  comingSoon?: boolean
 }
 
 interface DashboardSidebarProps {
-  currentRole: UserRole
-  isOpen: boolean
-  onClose?: () => void
+  menuItems: MenuItem[]
+  dashboardTitle: string
 }
 
-export default function DashboardSidebar({ currentRole, isOpen, onClose }: DashboardSidebarProps) {
+export default function DashboardSidebar({ menuItems, dashboardTitle }: DashboardSidebarProps) {
   const pathname = usePathname()
-  const navItems = roleNavItems[currentRole] || []
 
   return (
-    <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-20 md:hidden"
-          onClick={onClose}
-        />
-      )}
+    <Sidebar 
+      variant="inset" 
+      collapsible="none" 
+      className="h-full w-full theme-bg-secondary"
+      style={{ '--sidebar-width': '16rem', width: '16rem' } as React.CSSProperties}
+    >
+      <SidebarHeader className="p-4 border-b theme-border-color">
+        <SidebarRoleSwitcher dashboardTitle={dashboardTitle} />
+      </SidebarHeader>
+      
+      <SidebarContent className="theme-bg-secondary flex-1 overflow-y-auto">
+        <SidebarGroup className='p-6'>
+          <SidebarGroupLabel className="sr-only">Navigation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => {
+                const Icon = item.icon
+                // Determine if this is a base/root route (no sub-routes should activate it)
+                // Check if this href is a prefix of other menu items' hrefs
+                const isBaseRoute = menuItems.some(
+                  otherItem => otherItem.href !== item.href && otherItem.href.startsWith(item.href + '/')
+                )
+                
+                // For base routes, only mark active on exact match
+                // For other routes, check if pathname starts with the href + '/'
+                const isActive = isBaseRoute
+                  ? pathname === item.href
+                  : pathname === item.href || pathname.startsWith(item.href + '/')
+                
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className={cn(
+                        'w-full justify-start',
+                        isActive && 'theme-fg-color theme-fc-heading',
+                        !isActive && 'theme-fc-light hover:theme-fg-color',
+                        item.comingSoon && 'opacity-60 cursor-not-allowed'
+                      )}
+                    >
+                      <Link
+                        href={item.comingSoon ? '#' : item.href}
+                        onClick={(e) => {
+                          if (item.comingSoon) {
+                            e.preventDefault()
+                          }
+                        }}
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <Icon className={cn('w-5 h-5 flex-shrink-0', isActive && 'text-primary-100')} />
+                        <span className="font-medium flex-1">{item.label}</span>
+                        {item.badge && (
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-primary-200 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
+                            {item.badge}
+                          </span>
+                        )}
+                        {item.comingSoon && (
+                          <span className="text-xs opacity-75 ml-auto">Soon</span>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'fixed top-0 left-0 z-30 h-full w-64 theme-bg-color theme-border-color border-r transition-transform duration-300 md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:translate-x-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-      >
-        <nav className="p-4 space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            const isActive = pathname === item.href
-            
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
-                  isActive
-                    ? 'theme-bg-primary-color-100 text-white'
-                    : 'theme-fc-base hover:theme-bg-color-dark'
-                )}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            )
-          })}
-        </nav>
-      </aside>
-    </>
+      <SidebarFooter className="p-4 border-t theme-border-color">
+        <AccountDropdown />
+      </SidebarFooter>
+    </Sidebar>
   )
 }
-

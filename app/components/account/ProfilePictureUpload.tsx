@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 // import { uploadProfilePhoto, deleteProfilePhoto } from '@/lib/actions/profile-actions'
 import { toast } from 'sonner'
+import { r2Provider } from '@/lib/storage'
 import { User, X, Camera } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
@@ -51,28 +52,42 @@ export function ProfilePictureUpload({
     }
     reader.readAsDataURL(file)
 
-    // Upload file via API
+    // Direct browser upload using R2 presigned PUT
     setIsUploading(true)
-    const formData = new FormData()
-    formData.append('file', file)
-
     try {
-      const res = await fetch('/api/profile/photo', {
-        method: 'POST',
-        body: formData,
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      // Request presigned URL for public upload. Server will compose key as profile-photos/{userId}/profile.ext
+      const presign = await r2Provider.presignPut({
+        filename: `profile.${ext}`,
+        contentType: file.type,
+        visibility: 'public',
+        category: 'profile-photos',
       })
-      const json = await res.json()
-      if (res.ok && json?.photo_url) {
-        onPhotoChange(json.photo_url as string)
-        toast.success('Profile picture updated successfully')
-      } else {
-        toast.error(json?.error || 'Failed to upload image')
-        setPreviewUrl(currentPhotoUrl || null) // Revert preview
+
+      const putRes = await fetch(presign.url, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      if (!putRes.ok) throw new Error('Upload failed')
+
+      // Commit to profile with the authoritative key returned by server
+      const commitRes = await fetch('/api/profile/photo/commit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: presign.key }),
+      })
+      const commitJson = await commitRes.json()
+      if (!commitRes.ok || !commitJson?.photo_url) {
+        throw new Error(commitJson?.error || 'Failed to save photo')
       }
+
+      onPhotoChange(commitJson.photo_url as string)
+        toast.success('Profile picture updated successfully')
     } catch (error) {
       console.error('Upload error:', error)
       toast.error('Failed to upload image')
-      setPreviewUrl(currentPhotoUrl || null) // Revert preview
+      setPreviewUrl(currentPhotoUrl || null)
     } finally {
       setIsUploading(false)
     }

@@ -7,6 +7,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { r2Buckets, r2Client, r2PublicBaseUrl } from '@/lib/r2'
 import { z } from 'zod'
 
 interface ActionResponse {
@@ -108,28 +110,21 @@ export async function uploadProfilePhoto(formData: FormData): Promise<ActionResp
       return { success: false, error: 'Invalid file type. Only JPEG, PNG, and WebP are allowed' }
     }
 
-    // Generate unique filename
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}/profile.${fileExt}`
-    const filePath = `profile-photos/${fileName}`
+    // Generate key in public bucket
+    const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase()
+    const key = `profile-photos/${user.id}/profile.${fileExt}`
 
-    // Upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
-      .from('profile-photos')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true
-      })
+    // Upload directly to R2 public bucket (server-side fallback). In the UI we will prefer direct browser upload.
+    const arrayBuffer = await file.arrayBuffer()
+    await r2Client.send(new PutObjectCommand({
+      Bucket: r2Buckets.public,
+      Key: key,
+      Body: Buffer.from(arrayBuffer),
+      ContentType: file.type,
+      CacheControl: process.env.R2_DEFAULT_PUBLIC_CACHE_CONTROL || 'public, max-age=3600, s-maxage=3600',
+    }))
 
-    if (uploadError) {
-      console.error('Error uploading file:', uploadError)
-      return { success: false, error: 'Failed to upload image' }
-    }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('profile-photos')
-      .getPublicUrl(filePath)
+    const publicUrl = r2PublicBaseUrl ? `${r2PublicBaseUrl}/${key}` : ''
 
     // Update profile with new photo URL
     const { error: updateError } = await supabase
@@ -174,20 +169,23 @@ export async function deleteProfilePhoto(): Promise<ActionResponse> {
       .single()
 
     if (profile?.photo_url) {
-      // Extract file path from URL
-      const url = new URL(profile.photo_url)
-      const pathParts = url.pathname.split('/')
-      const fileName = pathParts[pathParts.length - 1]
-      const filePath = `${user.id}/${fileName}`
+      try {
+        const url = new URL(profile.photo_url)
+        const keyToDelete = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname
 
-      // Delete from storage
-      const { error: deleteError } = await supabase.storage
-        .from('profile-photos')
-        .remove([filePath])
-
-      if (deleteError) {
-        console.error('Error deleting file from storage:', deleteError)
-        // Continue with database update even if storage deletion fails
+        if (r2PublicBaseUrl && profile.photo_url.startsWith(r2PublicBaseUrl)) {
+          await r2Client.send(new DeleteObjectCommand({ Bucket: r2Buckets.public, Key: keyToDelete }))
+        } else {
+          // Fallback: try deleting from Supabase bucket if legacy URL
+          const { error: deleteError } = await supabase.storage
+            .from('profile-photos')
+            .remove([keyToDelete])
+          if (deleteError) {
+            console.error('Error deleting legacy Supabase file:', deleteError)
+          }
+        }
+      } catch {
+        // Ignore deletion errors; proceed to clear DB reference
       }
     }
 

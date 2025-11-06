@@ -51,7 +51,7 @@ export function getOrganizationSchema(): OrganizationSchema {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Tummy Tales',
+    name: 'BellyBox',
     description: 'Home-cooked tiffin subscription service connecting home chefs with customers',
     url: baseUrl,
     logo: `${baseUrl}/logo.png`,
@@ -79,7 +79,7 @@ export function getWebsiteSchema(): WebsiteSchema {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Tummy Tales',
+    name: 'BellyBox',
     url: baseUrl,
     potentialAction: {
       '@type': 'SearchAction',

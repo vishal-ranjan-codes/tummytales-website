@@ -80,7 +80,7 @@ export default function CustomerOnboarding() {
         return
       }
       
-      toast.success('Welcome to Tummy Tales!')
+      toast.success('Welcome to BellyBox!')
       router.push('/homechefs')
     } catch (err) {
       console.error('Onboarding error:', err)
@@ -94,7 +94,7 @@ export default function CustomerOnboarding() {
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold theme-fc-heading">
-          Welcome to Tummy Tales!
+          Welcome to BellyBox!
         </h1>
         <p className="theme-fc-light">
           Let&apos;s get you started with delicious home-cooked meals

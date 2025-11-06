@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Inter } from 'next/font/google'
 import "./globals.css";
-import Footer from './components/Footer'
-import Header from './components/Header'
+import FooterWrapper from './components/FooterWrapper'
+import HeaderServer from './components/HeaderServer'
 import { getBaseMetadata } from '@/lib/seo/metadata'
 import { getOrganizationSchema, getWebsiteSchema } from '@/lib/seo/structured-data'
 import StructuredData from './components/seo/StructuredData'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
+import { Toaster } from '@/components/ui/sonner'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -26,11 +27,12 @@ export default function RootLayout({
       <body className={`theme-fc-base theme-bg-color ${ inter.className }`}>
         <AuthProvider>
         <div className="site" id="page">
-          <Header/>
+          <HeaderServer/>
             {children}
-          <Footer/>
+          <FooterWrapper/>
         </div>
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   );

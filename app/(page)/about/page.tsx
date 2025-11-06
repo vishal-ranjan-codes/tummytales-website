@@ -11,7 +11,7 @@ export default function About() {
             <div className="flex flex-col gap-20 max-sm:gap-10">
               <div className="flex flex-col gap-6 pt-30 container-max-md text-center justify-center">
                 <h1 className='lb-hero-heading theme-fc-heading w-full leading-6 text-2xl md:text-4xl lg:text-5xl font-medium' style={{lineHeight: 1.2}}>
-                  About Tummy Tales
+                  About BellyBox
                 </h1>
                 <p className="theme-fc-light container-max-tab">
                   We&apos;re on a mission to connect home chefs with hungry customers. No more expensive restaurants, no more unhealthy fast food - just fresh, authentic, home-cooked meals delivered to your doorstep.
@@ -39,7 +39,7 @@ export default function About() {
                 Our Story
               </h2>
               <p className="text-lg mb-6 theme-fc-light">
-                Tummy Tales was born from a simple observation: millions of people crave home-cooked meals but don&apos;t have the time or skills to prepare them, while talented home chefs struggle to reach customers beyond their immediate neighborhoods.
+                BellyBox was born from a simple observation: millions of people crave home-cooked meals but don&apos;t have the time or skills to prepare them, while talented home chefs struggle to reach customers beyond their immediate neighborhoods.
               </p>
               <p className="text-lg mb-6 theme-fc-light">
                 We believe that everyone deserves access to fresh, authentic, home-cooked meals. That&apos;s why we&apos;ve created a platform that connects skilled home chefs with hungry customers, making quality food accessible and affordable for everyone.
@@ -121,7 +121,7 @@ export default function About() {
               Ready to Join Our Community?
             </h2>
             <p className="text-lg mb-8 theme-fc-light">
-              Join thousands of satisfied customers, talented home chefs, and delivery partners who&apos;ve already discovered the joy of Tummy Tales.
+              Join thousands of satisfied customers, talented home chefs, and delivery partners who&apos;ve already discovered the joy of BellyBox.
             </p>
             <div className="flex gap-4 flex-wrap justify-center">
               <Button variant="default" size="lg">

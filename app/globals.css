@@ -24,6 +24,8 @@
 
 @import 'tailwindcss';
 
+/* @import 'sonner/dist/styles.css'; */
+
 @custom-variant dark (&:is(.dark *));
 
 /* ========================================================================
@@ -34,6 +36,17 @@
   --header-height: 80px;
   --theme-rounded: 10px;
   --theme-rounded-sm: 6px;
+  /* Sidebar variables mapped to design system tokens */
+  --sidebar: var(--color-layout-background-dark);
+  --sidebar-foreground: var(--color-fc-base);
+  --sidebar-primary: var(--color-primary-100);
+  --sidebar-primary-foreground: var(--color-primary-100);
+  --sidebar-accent: var(--color-layout-foreground);
+  --sidebar-accent-foreground: var(--color-fc-base);
+  --sidebar-border: var(--color-layout-border);
+  --sidebar-ring: var(--color-primary-50);
+
+  --sidebar-width-desktop: 320px;
 }
 
 /* ========================================================================
@@ -60,7 +73,7 @@ html {
   /* ========================================================================
      DESIGN TOKENS - LIGHT THEME
      ======================================================================== */
-  
+
   /* ------------------------------------------------------------------------ 
      Primary Brand Colors
      Base: #E9723D (Warm Orange)
@@ -105,13 +118,12 @@ html {
   --color-layout-border: #dfdfdf;          /* Standard borders */
   --color-layout-border-light: #F0F0F0;    /* Subtle dividers */
 
-
   /* ========================================================================
      DESIGN TOKENS - DARK THEME
      Suffix: --dark (automatically applied when .dark class is present)
      Theme: Warm orange-brown with high contrast
      ======================================================================== */
-  
+
   /* ------------------------------------------------------------------------ 
      Primary Brand Colors (Dark Mode)
      Base: #FF8C4D (Brighter orange for dark backgrounds)
@@ -155,11 +167,10 @@ html {
   --color-layout-border--dark: #5C3D2E;          /* Standard borders */
   --color-layout-border-light--dark: #4A3025;    /* Subtle dividers */
 
-
   /* ========================================================================
      SPECIAL PURPOSE COLORS
      ======================================================================== */
-  
+
   /* Gradient for primary CTA buttons */
   --color-primary-btn-gradient: linear-gradient(230deg, #D2691E 15%, #FF8C4D 100%);
 
@@ -169,12 +180,11 @@ html {
   --color-theme-fg-dark: #185B50;
   --color-layout-fg-darker: #114f45;
 
-
   /* ========================================================================
      OPACITY UTILITIES
      White and black overlays for layering effects
      ======================================================================== */
-  
+
   /* White opacity variants (for dark backgrounds) */
   --color-white-opacity-03: rgb(255 255 255 / 3%);
   --color-white-opacity-05: rgb(255 255 255 / 5%);
@@ -203,13 +213,12 @@ html {
   --color-black-opacity-90: rgb(0 0 0 / 90%);
   --color-black-opacity-100: rgb(0 0 0 / 100%);
 
-
   /* ========================================================================
      SHADCN/UI COMPATIBILITY LAYER
      Maps custom tokens to shadcn component expectations
      Automatically switches between light/dark via utility classes
      ======================================================================== */
-  
+
   --color-background: var(--color-layout-background);
   --color-foreground: var(--color-fc-heading);
   --color-card: var(--color-layout-foreground);
@@ -230,18 +239,73 @@ html {
   --color-input: var(--color-layout-border);
   --color-ring: var(--color-primary-50);
 
+  /* ========================================================================
+     SHADCN/UI COMPATIBILITY LAYER - DARK THEME
+     Maps custom tokens to shadcn component expectations for dark mode
+     ======================================================================== */
+
+  --color-background--dark: var(--color-layout-background--dark);
+  --color-foreground--dark: var(--color-fc-heading--dark);
+  --color-card--dark: var(--color-layout-foreground--dark);
+  --color-card-foreground--dark: var(--color-fc-heading--dark);
+  --color-popover--dark: var(--color-layout-foreground--dark);
+  --color-popover-foreground--dark: var(--color-fc-heading--dark);
+  --color-primary--dark: var(--color-primary-100--dark);
+  --color-primary-foreground--dark: #FFFFFF;
+  --color-secondary--dark: var(--color-layout-background-dark--dark);
+  --color-secondary-foreground--dark: var(--color-fc-heading--dark);
+  --color-muted--dark: var(--color-layout-background-dark--dark);
+  --color-muted-foreground--dark: var(--color-fc-light--dark);
+  --color-accent--dark: var(--color-primary-12--dark);
+  --color-accent-foreground--dark: var(--color-fc-heading--dark);
+  --color-destructive--dark: #DC2626;
+  --color-destructive-foreground--dark: #FFFFFF;
+  --color-border--dark: var(--color-layout-border--dark);
+  --color-input--dark: var(--color-layout-border--dark);
+  --color-ring--dark: var(--color-primary-50--dark);
 
   /* ========================================================================
      TYPOGRAPHY SCALE
      Consistent text sizing across the design system
      ======================================================================== */
-  
+
   --text-h1: 2rem;       /* 32px - Page titles */
   --text-h2: 1.75rem;    /* 28px - Section headings */
   --text-h3: 1.5rem;     /* 24px - Subsection headings */
   --text-h4: 1.25rem;    /* 20px - Card headings */
   --text-h5: 1rem;       /* 16px - Small headings */
   --text-h6: 0.875rem;   /* 14px - Overline text */
+
+  /* ========================================================================
+     ANIMATIONS
+     Component-specific animations
+     ======================================================================== */
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+/* ========================================================================
+   KEYFRAMES
+   Animation definitions for components
+   ======================================================================== */
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
 }
 
 /* ========================================================================
@@ -289,8 +353,6 @@ html {
   @apply text-fc-heading-light dark:text-fc-heading-light--dark;
 }
 
-
-
 /* ========================================================================
    COLOR UTILITIES - BACKGROUNDS
    Page and section background colors
@@ -330,8 +392,6 @@ html {
   @apply border-layout-border-light dark:border-layout-border-light--dark;
 }
 
-
-
 /* Text Primary Colors */
 @utility theme-text-primary-color-100 {
   @apply text-primary-100 dark:text-primary-100--dark;
@@ -360,8 +420,6 @@ html {
 @utility theme-text-primary-color-05 {
   @apply text-primary-05 dark:text-primary-05--dark;
 }
-
-
 
 /* Background Primary Colors */
 @utility theme-bg-primary-color-100 {
@@ -449,8 +507,6 @@ html {
   @apply ring-primary-50 dark:ring-primary-50--dark;
 }
 
-
-
 /* Border Radius */
 @utility theme-rounded {
   border-radius: var(--theme-rounded);
@@ -526,9 +582,6 @@ html {
   @apply bg-black-opacity-100 dark:bg-white-opacity-100;
 }
 
-
-
-
 /* Button Hover Dark */
 @utility button-hover-dark {
   &:hover {
@@ -541,8 +594,6 @@ html {
     box-shadow: rgb(0 0 0 / 15%) 0px 0px 0px 9999px inset;
   }
 }
-
-
 
 /* ========================================================================
    LAYOUT UTILITIES - CONTAINERS
@@ -597,8 +648,6 @@ html {
   @apply max-w-7xl mx-auto px-4 sm:px-7;
 }
 
-
-
 /* ========================================================================
    TYPOGRAPHY UTILITIES
    Pre-styled heading classes combining size, weight, and color
@@ -628,8 +677,6 @@ html {
 @utility theme-h6 {
   @apply text-h6 font-bold uppercase theme-fc-heading;
 }
-
-
 
 /* ========================================================================
    COMPONENT UTILITIES
@@ -820,7 +867,6 @@ html, body {
   color: var(--color-primary-100);
 } */
 
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -829,8 +875,6 @@ html, body {
     @apply bg-background text-foreground;
   }
 }
-
-
 
 /* Rich Text Styles */
 
@@ -854,7 +898,6 @@ html, body {
     margin: min(0em, calc(calc(1.3em - var(--framer-blockquote-line-height, var(--framer-line-height, 1.3em))) / -2));
 }
 
-
 /* Single Lesson */
 
 .single-lesson-wrap .lesson-sidebar {
@@ -873,4 +916,33 @@ html, body {
 @media (min-width: 768px) {
   .single-lesson-wrap .lesson-sidebar { display: block; }
   .single-lesson-wrap.sidebar-closed .lesson-sidebar { display: none; }
+}
+
+/*---break---
+ */
+
+.dark {
+  /* Sidebar variables mapped to design system tokens (dark mode) */
+  --sidebar: var(--color-layout-foreground--dark);
+  --sidebar-foreground: var(--color-fc-heading--dark);
+  --sidebar-primary: var(--color-primary-100--dark);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--color-primary-12--dark);
+  --sidebar-accent-foreground: var(--color-fc-heading--dark);
+  --sidebar-border: var(--color-layout-border--dark);
+  --sidebar-ring: var(--color-primary-50--dark);
+}
+
+/*---break---
+ */
+
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }

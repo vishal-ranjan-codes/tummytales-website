@@ -6,8 +6,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Authentication - Tummy Tales',
-  description: 'Sign in or sign up to Tummy Tales',
+  title: 'Authentication - BellyBox',
+  description: 'Sign in or sign up to BellyBox',
 }
 
 export default function AuthLayout({

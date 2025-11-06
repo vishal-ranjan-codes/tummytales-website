@@ -225,7 +225,7 @@ export default function LoginPage() {
           Welcome Back
         </h1>
         <p className="theme-fc-light">
-          Sign in to your Tummy Tales account
+          Sign in to your BellyBox account
         </p>
       </div>
 

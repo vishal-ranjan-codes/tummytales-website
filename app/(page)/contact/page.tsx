@@ -78,7 +78,7 @@ export default function ContactPage() {
               </h1>
                              <p className="theme-fc-light text-lg md:text-xl max-w-2xl mx-auto">
                  Have a question about our tiffin subscription service or want to join as a vendor? 
-                 We&apos;d love to hear from you and help you get started with Tummy Tales.
+                 We&apos;d love to hear from you and help you get started with BellyBox.
                </p>
             </div>
           </div>
@@ -110,7 +110,7 @@ export default function ContactPage() {
                     <div>
                       <h3 className="font-medium theme-fc-heading mb-1">Office Address</h3>
                       <p className="theme-fc-light">
-                        Tummy Tales Headquarters,<br />
+                        BellyBox Headquarters,<br />
                         Food Tech Hub, Sector 25,<br />
                         Gurugram, Haryana, 122001
                       </p>

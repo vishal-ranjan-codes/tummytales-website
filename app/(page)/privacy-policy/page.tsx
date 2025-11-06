@@ -10,9 +10,9 @@ export default function PrivacyPolicyPage() {
 
             <section className="mb-8">
                 <p className="mt-6">
-                Tummy Tales (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) respects your privacy and is committed to protecting your personal information.
+                BellyBox (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) respects your privacy and is committed to protecting your personal information.
                 This Privacy Policy explains how we collect, use, disclose, and safeguard your data when you use our tiffin subscription platform,
-                mobile app, and services (collectively, the &quot;Services&quot;). By using Tummy Tales, you agree to the terms of this Privacy Policy.
+                mobile app, and services (collectively, the &quot;Services&quot;). By using BellyBox, you agree to the terms of this Privacy Policy.
                 </p>
             </section>
 
@@ -116,7 +116,7 @@ export default function PrivacyPolicyPage() {
             <section id="children" className="mt-10">
                 <h2 className="text-2xl theme-fc-heading-light">8. Children’s Privacy</h2>
                 <p>
-                Tummy Tales is intended for individuals 18 years and older. We do not knowingly collect information from
+                BellyBox is intended for individuals 18 years and older. We do not knowingly collect information from
                 children under 18. If we learn we have collected such information, we will delete it immediately.
                 </p>
             </section>
@@ -148,7 +148,7 @@ export default function PrivacyPolicyPage() {
             <section id="contact" className="mt-10">
                 <h2 className="text-2xl theme-fc-heading-light">12. Contact Us</h2>
                 <address className="not-italic">
-                <p><strong>Tummy Tales</strong></p>
+                <p><strong>BellyBox</strong></p>
                 <p>Food Tech Hub, Sector 25, Gurugram, Haryana, India</p>
                 <p>hello@tummytales.com</p>
                 </address>

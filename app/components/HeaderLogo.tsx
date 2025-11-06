@@ -18,7 +18,7 @@ export default function HeaderLogo() {
                     </svg>
                 </div>
                 <div className="branding-site-title text-xl font-medium theme-fc-base hover:theme-fc-heading max-sm:sr-only">
-                    <p>Tummy Tales</p>
+                    <p>BellyBox</p>
                 </div>
 
             </Link> 

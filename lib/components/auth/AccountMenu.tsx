@@ -40,6 +40,8 @@ import { toast } from 'sonner'
 
 interface AccountMenuProps {
   variant?: 'desktop' | 'mobile'
+  initialProfile?: { full_name: string; photo_url: string | null; currentRole: string | null }
+  initialUser?: { id: string | null; email: string | null }
 }
 
 const roleIcons: Record<UserRole, React.ElementType> = {
@@ -58,12 +60,24 @@ const roleDashboards: Record<UserRole, string> = {
 
 type MenuItem = { label: string; icon: React.ElementType; href: string }
 
-export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
-  const { user, profile, currentRole, roles, signOut } = useAuth()
+export default function AccountMenu({ variant = 'desktop', initialProfile, initialUser }: AccountMenuProps) {
+  const { user: ctxUser, profile: ctxProfile, currentRole: ctxRole, roles, signOut, isReady } = useAuth()
+  // Use client user if available, otherwise use initial user
+  const user = ctxUser ?? (initialUser ? { id: initialUser.id, email: initialUser.email } as { id: string | null; email: string | null } | null : null)
+  const currentRole = (ctxRole ?? initialProfile?.currentRole ?? null) as UserRole | null
+  const displayFullName = (ctxProfile?.full_name || initialProfile?.full_name || user?.email || 'User') as string
+  const displayPhoto = (ctxProfile?.photo_url ?? initialProfile?.photo_url ?? null) as string | null
   const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  if (!user || !profile) {
+  // If auth context is ready and no user, don't render
+  // If auth context is not ready yet but we have initialUser, render (optimistic)
+  if (isReady && !ctxUser && !initialUser) {
+    return null
+  }
+  
+  // If no user at all (neither client nor initial), don't render
+  if (!user && !initialUser) {
     return null
   }
 
@@ -79,10 +93,10 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
   }
 
   const getUserInitials = () => {
-    const name = profile.full_name || user.email || 'User'
+    const name = displayFullName
     return name
       .split(' ')
-      .map(word => word.charAt(0))
+      .map((word: string) => word.charAt(0))
       .join('')
       .toUpperCase()
       .slice(0, 2)
@@ -100,11 +114,11 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
       {
         label: 'Dashboard',
         icon: LayoutDashboard,
-        href: roleDashboards[currentRole],
+        href: roleDashboards[currentRole as UserRole],
       },
     ]
 
-    const roleSpecificItems = {
+    const roleSpecificItems: Record<UserRole, Array<MenuItem>> = {
       customer: [
         {
           label: 'My Orders',
@@ -145,7 +159,7 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
       ],
     }
 
-    return [...baseItems, ...(roleSpecificItems[currentRole] || [])]
+    return [...baseItems, ...(roleSpecificItems[currentRole as UserRole] || [])]
   }
 
   const menuItems = getRoleSpecificMenuItems()
@@ -172,7 +186,7 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
           className="flex items-center gap-2 p-2"
         >
           <Avatar className="w-8 h-8">
-            <AvatarImage src={profile.photo_url || undefined} />
+            <AvatarImage src={displayPhoto || undefined} />
             <AvatarFallback className="text-xs font-medium">
               {getUserInitials()}
             </AvatarFallback>
@@ -191,14 +205,14 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
               {/* User Info */}
               <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <Avatar className="w-12 h-12">
-                  <AvatarImage src={profile.photo_url || undefined} />
+                  <AvatarImage src={displayPhoto || undefined} />
                   <AvatarFallback className="text-sm font-medium">
                     {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                    {profile.full_name || user.email}
+                    {displayFullName}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {currentRole ? getRoleDisplayName(currentRole) : 'No Role'}
@@ -212,14 +226,14 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
               </div>
 
               {/* Role Switcher */}
-              {roles.length > 1 && (
+              {(roles as UserRole[]).length > 1 && (
                 <>
                   <div className="border-t pt-4">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
                       Switch Role
                     </p>
                     <div className="space-y-1">
-                      {roles.map(role => {
+                      {(roles as UserRole[]).map((role: UserRole) => {
                         const Icon = roleIcons[role]
                         const isActive = role === currentRole
                         
@@ -269,7 +283,7 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-2 p-2">
           <Avatar className="w-8 h-8">
-            <AvatarImage src={profile.photo_url || undefined} />
+            <AvatarImage src={displayPhoto || undefined} />
             <AvatarFallback className="text-xs font-medium">
               {getUserInitials()}
             </AvatarFallback>
@@ -280,9 +294,7 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
       <DropdownMenuContent align="end" className="w-56 z-[100]">
         <DropdownMenuLabel className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">
-              {profile.full_name || user.email}
-            </p>
+            <p className="text-sm font-medium truncate">{displayFullName}</p>
             <p className="text-xs text-gray-500">
               {currentRole ? getRoleDisplayName(currentRole) : 'No Role'}
             </p>
@@ -298,13 +310,13 @@ export default function AccountMenu({ variant = 'desktop' }: AccountMenuProps) {
         ))}
 
         {/* Role Switcher */}
-        {roles.length > 1 && (
+            {(roles as UserRole[]).length > 1 && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wider">
               Switch Role
             </DropdownMenuLabel>
-            {roles.map(role => {
+            {(roles as UserRole[]).map((role: UserRole) => {
               const Icon = roleIcons[role]
               const isActive = role === currentRole
               

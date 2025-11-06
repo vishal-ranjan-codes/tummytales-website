@@ -280,7 +280,7 @@ export default function Home() {
               Ready to Transform Your Mealtime?
             </h2>
             <p className='mb-3 theme-fc-light text-sm sm:text-base container-max-tab'>
-              Join thousands of satisfied customers who&apos;ve discovered the joy of home-cooked meals delivered daily. Whether you&apos;re a hungry customer, aspiring vendor, or delivery partner, Tummy Tales has something for everyone.
+              Join thousands of satisfied customers who&apos;ve discovered the joy of home-cooked meals delivered daily. Whether you&apos;re a hungry customer, aspiring vendor, or delivery partner, BellyBox has something for everyone.
             </p>
           </div>
 
