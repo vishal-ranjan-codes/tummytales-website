@@ -43,14 +43,14 @@ export async function getAuth(): Promise<InitialAuth> {
       console.error('Error fetching profile in getAuth:', profileError)
       return {
         isAuthenticated: true,
-        user: { id: user.id, email: user.email ?? null },
+        user: { id: user.id, email: user.email ?? null, user_metadata: user.user_metadata },
         profile: null,
       }
     }
 
     return {
       isAuthenticated: true,
-      user: { id: user.id, email: user.email ?? null },
+      user: { id: user.id, email: user.email ?? null, user_metadata: user.user_metadata },
       profile: {
         id: profile.id,
         full_name: profile.full_name,

@@ -35,7 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [isInitialized, setIsInitialized] = useState(false)
   const [profileFetchAttempted, setProfileFetchAttempted] = useState(false)
-  const supabase = createClient()
+  // Memoize supabase client to prevent recreation on every render
+  const supabase = useMemo(() => createClient(), [])
 
   // Computed values
   const roles = useMemo(() => profile?.roles ?? [], [profile?.roles])

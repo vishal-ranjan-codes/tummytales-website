@@ -1,11 +1,13 @@
 /**
  * Vendor Hero Component
- * Hero section for vendor detail page with cover image, profile, and key info
+ * Enhanced hero section for vendor detail page with subscribe button
  */
 
 import Image from 'next/image'
-import { Star, MapPin, Leaf } from 'lucide-react'
+import { Star, MapPin, Leaf, Share2, Heart } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import SubscriptionButton from './SubscriptionButton'
 
 interface VendorHeroProps {
   vendor: {
@@ -71,13 +73,13 @@ export default function VendorHero({ vendor, zone, profileImage, coverImage }: V
             </div>
 
             {/* Vendor Info */}
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 space-y-4">
               <div className="flex flex-wrap items-start gap-3">
                 <h1 className="text-3xl md:text-4xl font-bold theme-fc-heading">
                   {vendor.display_name}
                 </h1>
                 {vendor.veg_only && (
-                  <Badge className="bg-green-500 text-white px-3 py-1 text-sm">
+                  <Badge className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm">
                     <Leaf className="w-3 h-3 mr-1" />
                     Pure Veg
                   </Badge>
@@ -109,6 +111,22 @@ export default function VendorHero({ vendor, zone, profileImage, coverImage }: V
                     <span>{zoneName}</span>
                   </div>
                 )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <SubscriptionButton 
+                  vendorName={vendor.display_name}
+                  size="lg"
+                />
+                <Button variant="outline" size="lg">
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Share
+                </Button>
+                <Button variant="ghost" size="lg">
+                  <Heart className="w-4 h-4 mr-2" />
+                  Save
+                </Button>
               </div>
             </div>
           </div>

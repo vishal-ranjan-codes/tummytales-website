@@ -63,12 +63,39 @@ type MenuItem = { label: string; icon: React.ElementType; href: string }
 export default function AccountMenu({ variant = 'desktop', initialProfile, initialUser }: AccountMenuProps) {
   const { user: ctxUser, profile: ctxProfile, currentRole: ctxRole, roles, signOut, isReady } = useAuth()
   // Use client user if available, otherwise use initial user
-  const user = ctxUser ?? (initialUser ? { id: initialUser.id, email: initialUser.email } as { id: string | null; email: string | null } | null : null)
+  const user = ctxUser ?? (initialUser ? { id: initialUser.id, email: initialUser.email, user_metadata: (initialUser as { user_metadata?: Record<string, unknown> })?.user_metadata } as { id: string | null; email: string | null; user_metadata?: Record<string, unknown> } | null : null)
   const currentRole = (ctxRole ?? initialProfile?.currentRole ?? null) as UserRole | null
   const displayFullName = (ctxProfile?.full_name || initialProfile?.full_name || user?.email || 'User') as string
-  const displayPhoto = (ctxProfile?.photo_url ?? initialProfile?.photo_url ?? null) as string | null
+  
+  // Get photo URL with fallback to user metadata (for Google Auth)
+  const getPhotoUrl = () => {
+    // First try profile photo_url
+    if (ctxProfile?.photo_url) return ctxProfile.photo_url
+    if (initialProfile?.photo_url) return initialProfile.photo_url
+    
+    // Fallback to user metadata (Google Auth stores it here)
+    // Check ctxUser first (client-side auth context)
+    if (ctxUser?.user_metadata) {
+      const metadata = ctxUser.user_metadata
+      if (metadata && typeof metadata === 'object') {
+        return (metadata as Record<string, unknown>).avatar_url as string | undefined || (metadata as Record<string, unknown>).picture as string | undefined || null
+      }
+    }
+    // Then check user (which might be initialUser)
+    if (user?.user_metadata) {
+      const metadata = user.user_metadata
+      if (metadata && typeof metadata === 'object') {
+        return (metadata as Record<string, unknown>).avatar_url as string | undefined || (metadata as Record<string, unknown>).picture as string | undefined || null
+      }
+    }
+    
+    return null
+  }
+  const displayPhoto = getPhotoUrl()
+  
   const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
   // If auth context is ready and no user, don't render
   // If auth context is not ready yet but we have initialUser, render (optimistic)
@@ -82,13 +109,18 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
   }
 
   const handleSignOut = async () => {
+    if (isSigningOut) return
+    setIsSigningOut(true)
     try {
       await signOut()
       toast.success('Signed out successfully!')
-      router.push('/')
+      router.replace('/')
+      router.refresh()
     } catch (error) {
       console.error('Sign out error:', error)
       toast.error('Failed to sign out. Please try again.')
+    } finally {
+      setIsSigningOut(false)
     }
   }
 
@@ -151,11 +183,8 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
         },
       ],
       admin: [
-        {
-          label: 'Admin Panel',
-          icon: Users,
-          href: '/admin',
-        },
+        // Admin Panel is already included in baseItems as "Dashboard" with href '/admin'
+        // No additional admin-specific items needed
       ],
     }
 
@@ -166,7 +195,6 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
 
   const renderMenuItem = (item: MenuItem, onClick?: () => void) => (
     <Link
-      key={item.href}
       href={item.href}
       onClick={onClick}
       className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors cursor-pointer"
@@ -186,7 +214,7 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
           className="flex items-center gap-2 p-2"
         >
           <Avatar className="w-8 h-8">
-            <AvatarImage src={displayPhoto || undefined} />
+            {displayPhoto && <AvatarImage src={displayPhoto} alt={displayFullName} />}
             <AvatarFallback className="text-xs font-medium">
               {getUserInitials()}
             </AvatarFallback>
@@ -205,7 +233,7 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
               {/* User Info */}
               <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <Avatar className="w-12 h-12">
-                  <AvatarImage src={displayPhoto || undefined} />
+                  {displayPhoto && <AvatarImage src={displayPhoto} alt={displayFullName} />}
                   <AvatarFallback className="text-sm font-medium">
                     {getUserInitials()}
                   </AvatarFallback>
@@ -222,7 +250,11 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
 
               {/* Menu Items */}
               <div className="space-y-1">
-                {menuItems.map(item => renderMenuItem(item, () => setIsMobileMenuOpen(false)))}
+                {menuItems.map((item, index) => (
+                  <div key={`${item.href}-${item.label}-${index}`}>
+                    {renderMenuItem(item, () => setIsMobileMenuOpen(false))}
+                  </div>
+                ))}
               </div>
 
               {/* Role Switcher */}
@@ -264,10 +296,11 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
                 <Button
                   variant="outline"
                   onClick={handleSignOut}
+                  disabled={isSigningOut}
                   className="w-full justify-start gap-3"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
                 </Button>
               </div>
             </div>
@@ -283,7 +316,7 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-2 p-2">
           <Avatar className="w-8 h-8">
-            <AvatarImage src={displayPhoto || undefined} />
+            {displayPhoto && <AvatarImage src={displayPhoto} alt={displayFullName} />}
             <AvatarFallback className="text-xs font-medium">
               {getUserInitials()}
             </AvatarFallback>
@@ -303,8 +336,8 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
         <DropdownMenuSeparator />
         
         {/* Menu Items */}
-        {menuItems.map(item => (
-          <DropdownMenuItem key={item.href} asChild>
+        {menuItems.map((item, index) => (
+          <DropdownMenuItem key={`${item.href}-${item.label}-${index}`} asChild>
             {renderMenuItem(item)}
           </DropdownMenuItem>
         ))}
@@ -337,9 +370,13 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
         )}
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">
+        <DropdownMenuItem
+          onClick={handleSignOut}
+          className="text-red-600 focus:text-red-600"
+          disabled={isSigningOut}
+        >
           <LogOut className="w-4 h-4 mr-2" />
-          <span>Sign Out</span>
+          <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -3,7 +3,7 @@
  * Centralized auth config with environment-based feature flags
  */
 
-export const authConfig = {
+const baseAuthConfig = {
   // Feature flags
   enableOAuth: process.env.NEXT_PUBLIC_ENABLE_OAUTH === 'true',
   enableEmail: process.env.NEXT_PUBLIC_ENABLE_EMAIL === 'true',
@@ -21,22 +21,35 @@ export const authConfig = {
   authTestMode: process.env.NEXT_PUBLIC_AUTH_TEST_MODE === 'true',
 } as const
 
+let cachedAuthConfig: typeof baseAuthConfig | null = null
+
+export function getCachedAuthConfig() {
+  if (!cachedAuthConfig) {
+    cachedAuthConfig = baseAuthConfig
+  }
+
+  return cachedAuthConfig
+}
+
+export const authConfig = getCachedAuthConfig()
+
 export type AuthMethod = 'oauth' | 'email' | 'phone'
 
 /**
  * Get enabled auth methods in display order
  */
 export function getEnabledAuthMethods(): AuthMethod[] {
+  const config = getCachedAuthConfig()
   const enabled: AuthMethod[] = []
   
-  if (authConfig.enableOAuth) enabled.push('oauth')
-  if (authConfig.enableEmail) enabled.push('email')
-  if (authConfig.enablePhone) enabled.push('phone')
+  if (config.enableOAuth) enabled.push('oauth')
+  if (config.enableEmail) enabled.push('email')
+  if (config.enablePhone) enabled.push('phone')
   
   // Sort by display order
   return enabled.sort((a, b) => {
-    const aIndex = authConfig.displayOrder.indexOf(a)
-    const bIndex = authConfig.displayOrder.indexOf(b)
+    const aIndex = config.displayOrder.indexOf(a)
+    const bIndex = config.displayOrder.indexOf(b)
     return aIndex - bIndex
   })
 }

@@ -39,6 +39,59 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  type MiddlewareProfile = {
+    roles: string[]
+    last_used_role: string | null
+    default_role: string | null
+    onboarding_completed: boolean
+    phone_verified?: boolean
+  }
+
+  const loadProfile = (() => {
+    let profilePromise: Promise<MiddlewareProfile | null> | null = null
+
+    return async () => {
+      if (!user) {
+        return null
+      }
+
+      if (!profilePromise) {
+        profilePromise = (async () => {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('roles, last_used_role, default_role, onboarding_completed, phone_verified')
+            .eq('id', user.id)
+            .single()
+
+          if (error) {
+            console.error('Error loading profile in middleware:', error)
+            return null
+          }
+
+          if (!data) {
+            return null
+          }
+
+          const roles = Array.isArray((data as { roles?: unknown }).roles)
+            ? ((data as { roles?: string[] }).roles ?? [])
+            : []
+
+          const normalized: MiddlewareProfile = {
+            roles,
+            last_used_role: (data as { last_used_role?: string | null }).last_used_role ?? null,
+            default_role: (data as { default_role?: string | null }).default_role ?? null,
+            onboarding_completed: Boolean((data as { onboarding_completed?: boolean }).onboarding_completed),
+            phone_verified: (data as { phone_verified?: boolean }).phone_verified,
+          }
+
+          return normalized
+        })()
+      }
+
+      return await profilePromise
+    }
+  })()
+
   // Handle protected routes
   if (isProtectedRoute && !user) {
     const loginUrl = new URL('/login', request.url)
@@ -57,11 +110,7 @@ export async function middleware(request: NextRequest) {
       return supabaseResponse
     }
     
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('roles, last_used_role, default_role, onboarding_completed, phone_verified')
-      .eq('id', user.id)
-      .single()
+    const profile = await loadProfile()
 
     if (profile) {
       // Check if onboarding is completed
@@ -70,23 +119,23 @@ export async function middleware(request: NextRequest) {
       }
 
       // Determine redirect based on role
-      const role = profile.last_used_role || profile.default_role || profile.roles[0]
-      
-      if (role === 'customer') {
-        return NextResponse.redirect(new URL('/homechefs', request.url))
-      } else {
+      const role = profile.last_used_role || profile.default_role || (profile.roles[0] ?? null)
+
+      if (role) {
+        if (role === 'customer') {
+          return NextResponse.redirect(new URL('/homechefs', request.url))
+        }
+
         return NextResponse.redirect(new URL(`/${role}`, request.url))
       }
+
+      return NextResponse.redirect(new URL('/signup/customer', request.url))
     }
   }
 
   // Handle dashboard route access
   if (isDashboardRoute && user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('roles, last_used_role, default_role, onboarding_completed')
-      .eq('id', user.id)
-      .single()
+    const profile = await loadProfile()
 
     if (!profile) {
       return NextResponse.redirect(new URL('/signup/customer', request.url))
@@ -94,7 +143,12 @@ export async function middleware(request: NextRequest) {
 
     // Check if onboarding is completed
     if (!profile.onboarding_completed && !isOnboardingRoute) {
-      return NextResponse.redirect(new URL(`/onboarding/${profile.roles[0]}`, request.url))
+      const nextRole = profile.roles[0]
+      if (nextRole) {
+        return NextResponse.redirect(new URL(`/onboarding/${nextRole}`, request.url))
+      }
+
+      return NextResponse.redirect(new URL('/signup/customer', request.url))
     }
 
     // Extract the role from the path (e.g., /customer -> customer)
@@ -111,8 +165,12 @@ export async function middleware(request: NextRequest) {
 
     if (!hasRole) {
       // User doesn't have this role - redirect to their appropriate page
-      const role = profile.last_used_role || profile.default_role || profile.roles[0]
+      const role = profile.last_used_role || profile.default_role || (profile.roles[0] ?? null)
       
+      if (!role) {
+        return NextResponse.redirect(new URL('/signup/customer', request.url))
+      }
+
       if (role === 'customer') {
         return NextResponse.redirect(new URL('/homechefs', request.url))
       } else if (profile.roles.includes(role)) {

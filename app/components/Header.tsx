@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { ChevronDown, Menu, X } from 'lucide-react'
 import HeaderLogo from "./HeaderLogo"
 import { Button } from '@/components/ui/button'
-import { getCurrentSection } from '@/lib/utils/scroll'
-import { navigateToSection, handleHashNavigation } from '@/lib/utils/navigation'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import AccountMenu from '@/lib/components/auth/AccountMenu'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import type { InitialAuth } from '@/lib/auth/types'
@@ -62,7 +66,6 @@ function isHiddenPath(pathname: string): boolean {
 
 export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
   const pathname = usePathname()
-  const router = useRouter()
   // Get client auth state for live updates (login/logout)
   const { isAuthenticated: clientIsAuthenticated, isReady: authIsReady } = useAuth()
   // Priority: Use client state if auth context is ready and has a value, otherwise use server state
@@ -78,7 +81,6 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
   const [isFullWidth, setIsFullWidth] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
   const [isClient, setIsClient] = useState(false)
-  const [activeSection, setActiveSection] = useState<string | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
@@ -89,29 +91,21 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
       setIsFullWidth(isFullWidthPath(pathname))
       setIsHidden(isHiddenPath(pathname))
     }
-
-    // Handle hash navigation on load
-    handleHashNavigation()
   }, [pathname])
 
-  // Handle scroll for active section and sticky header
+  // Handle scroll for sticky header background
   useEffect(() => {
-    if (!isClient || pathname !== '/') return
-
-    const sections = ['how-it-works', 'consumers', 'vendors', 'riders']
+    if (!isClient) return
 
     const handleScroll = () => {
       const scrolled = window.scrollY > 20
       setIsScrolled(scrolled)
-
-      const current = getCurrentSection(sections)
-      setActiveSection(current)
     }
 
     handleScroll() // Initial check
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [isClient, pathname])
+  }, [isClient])
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -121,13 +115,15 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
     setIsMenuOpen(false)
   }
 
-  const handleSectionClick = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
-    e.preventDefault()
-    closeMenu()
-    navigateToSection(sectionId, pathname, router)
-  }
+  const sectionLinks = [
+    { id: 'how-it-works', label: 'How It Works' },
+    { id: 'consumers', label: 'For Consumers' },
+    { id: 'vendors', label: 'For Vendors' },
+    { id: 'riders', label: 'For Riders' },
+  ]
 
-  const isHomepage = pathname === '/'
+  const getSectionHref = (sectionId: string) =>
+    pathname === '/' ? `#${sectionId}` : `/#${sectionId}`
 
   // Hide header on dashboard pages (they have their own headers)
   if (isHidden) {
@@ -156,69 +152,23 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
             aria-label="Main navigation"
           >
             <ul id="primary-menu" className="main-menu-list m-0 p-0 list-none flex flex-wrap gap-1">
-              {isHomepage ? (
-                <>
-                  <li className="menu-item flex justify-start items-center relative">
-                    <a 
-                      href="#how-it-works" 
-                      onClick={(e) => handleSectionClick(e, 'how-it-works')}
-                      className={`nav-menu-item ${activeSection === 'how-it-works' ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
-                    >
-                      How It Works
-                    </a>
-                  </li>
-                  <li className="menu-item flex justify-start items-center relative">
-                    <a 
-                      href="#consumers" 
-                      onClick={(e) => handleSectionClick(e, 'consumers')}
-                      className={`nav-menu-item ${activeSection === 'consumers' ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
-                    >
-                      For Consumers
-                    </a>
-                  </li>
-                  <li className="menu-item flex justify-start items-center relative">
-                    <a 
-                      href="#vendors" 
-                      onClick={(e) => handleSectionClick(e, 'vendors')}
-                      className={`nav-menu-item ${activeSection === 'vendors' ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
-                    >
-                      For Vendors
-                    </a>
-                  </li>
-                  <li className="menu-item flex justify-start items-center relative">
-                    <a 
-                      href="#riders" 
-                      onClick={(e) => handleSectionClick(e, 'riders')}
-                      className={`nav-menu-item ${activeSection === 'riders' ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
-                    >
-                      For Riders
-                    </a>
-                  </li>
-                </>
-              ) : (
-                <>
-                  <li className="menu-item flex justify-start items-center relative">
-                    <Link href="/#how-it-works" className="nav-menu-item">
-                      How It Works
-                    </Link>
-                  </li>
-                  <li className="menu-item flex justify-start items-center relative">
-                    <Link href="/#consumers" className="nav-menu-item">
-                      For Consumers
-                    </Link>
-                  </li>
-                  <li className="menu-item flex justify-start items-center relative">
-                    <Link href="/#vendors" className="nav-menu-item">
-                      For Vendors
-                    </Link>
-                  </li>
-                  <li className="menu-item flex justify-start items-center relative">
-                    <Link href="/#riders" className="nav-menu-item">
-                      For Riders
-                    </Link>
-                  </li>
-                </>
-              )}
+              <li className="menu-item flex justify-start items-center relative">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button type="button" className="nav-menu-item flex items-center gap-1">
+                      Explore
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {sectionLinks.map(({ id, label }) => (
+                      <DropdownMenuItem key={id} asChild>
+                        <Link href={getSectionHref(id)}>{label}</Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </li>
               <li className={`menu-item flex justify-start items-center relative ${pathname === "/about" ? "current-menu-item" : ""}`}>
                 <Link 
                   href="/about" 
@@ -352,85 +302,25 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
         >
           <nav className="main-navigation mobile p-6">
             <ul className="main-menu-list m-0 p-0 list-none flex flex-wrap gap-4 flex-col">
-              {isHomepage ? (
-                <>
-                  <li className="menu-item">
-                    <a 
-                      href="#how-it-works" 
-                      onClick={(e) => handleSectionClick(e, 'how-it-works')}
-                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
-                    >
-                      How It Works
-                    </a>
-                  </li>
-                  <li className="menu-item">
-                    <a 
-                      href="#consumers" 
-                      onClick={(e) => handleSectionClick(e, 'consumers')}
-                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
-                    >
-                      For Consumers
-                    </a>
-                  </li>
-                  <li className="menu-item">
-                    <a 
-                      href="#vendors" 
-                      onClick={(e) => handleSectionClick(e, 'vendors')}
-                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
-                    >
-                      For Vendors
-                    </a>
-                  </li>
-                  <li className="menu-item">
-                    <a 
-                      href="#riders" 
-                      onClick={(e) => handleSectionClick(e, 'riders')}
-                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
-                    >
-                      For Riders
-                    </a>
-                  </li>
-                </>
-              ) : (
-                <>
-                  <li className="menu-item">
-                    <Link 
-                      href="/#how-it-works" 
-                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
-                      onClick={closeMenu}
-                    >
-                      How It Works
-                    </Link>
-                  </li>
-                  <li className="menu-item">
-                    <Link 
-                      href="/#consumers" 
-                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
-                      onClick={closeMenu}
-                    >
-                      For Consumers
-                    </Link>
-                  </li>
-                  <li className="menu-item">
-                    <Link 
-                      href="/#vendors" 
-                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
-                      onClick={closeMenu}
-                    >
-                      For Vendors
-                    </Link>
-                  </li>
-                  <li className="menu-item">
-                    <Link 
-                      href="/#riders" 
-                      className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
-                      onClick={closeMenu}
-                    >
-                      For Riders
-                    </Link>
-                  </li>
-                </>
-              )}
+              <li className="menu-item">
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-semibold uppercase theme-fc-light tracking-wide px-1">
+                    Explore
+                  </span>
+                  <div className="flex flex-col gap-2">
+                    {sectionLinks.map(({ id, label }) => (
+                      <Link
+                        key={id}
+                        href={getSectionHref(id)}
+                        onClick={closeMenu}
+                        className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
+                      >
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </li>
               <li className="menu-item">
                 <Link 
                   href="/about" 

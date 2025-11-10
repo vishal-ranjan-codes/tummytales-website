@@ -4,7 +4,7 @@ export default function About() {
   return (
     <main className='site-content'>
       {/* Hero Section */}
-      <div className='hero-section relative overflow-hidden border-b theme-border-color bg-[#EA5A36]'>
+      <div className='hero-section relative overflow-hidden border-b theme-border-color bg-[#cd2555]'>
 
         <div className='relative z-2 gap-20 sm:gap-10 pt-16 pb-16'>
           <div className='dark container lb-hero-content'>

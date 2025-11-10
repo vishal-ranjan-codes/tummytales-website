@@ -82,12 +82,12 @@ export default function VendorProfileClient({ initialData }: VendorProfileClient
   }
 
   return (
-    <div className="space-y-8">
+    <div className="dashboard-page-content space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="dashboard-page-header flex items-center justify-between flex-wrap gap-4 border-b theme-border-color px-4 py-3 md:py-5 md:px-3 lg:px-6 lg:py-4">
         <div>
-          <h1 className="text-3xl font-bold theme-fc-heading mb-2">Profile & Media</h1>
-          <p className="theme-fc-light">
+          <h1 className="theme-h4">Profile & Media</h1>
+          <p className="theme-fc-light mt-1">
             Manage your kitchen profile and public media
           </p>
         </div>
@@ -103,97 +103,100 @@ export default function VendorProfileClient({ initialData }: VendorProfileClient
         </div>
       </div>
 
-      {/* Kitchen Information */}
-      <div className="box p-6 space-y-6">
-        <h2 className="text-xl font-semibold theme-fc-heading">Kitchen Information</h2>
-        
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="displayName">Display Name *</Label>
-            <Input
-              id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="How you want to be known"
-              disabled={saving}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bio">Bio / Story</Label>
-            <Textarea
-              id="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell customers about your kitchen and cooking..."
-              rows={5}
-              disabled={saving}
-            />
-            <p className="text-xs theme-fc-light">
-              Share your story, cooking philosophy, or what makes your food special
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Label htmlFor="vegOnly">Vegetarian Only Kitchen</Label>
-            <Switch
-              id="vegOnly"
-              checked={vegOnly}
-              onCheckedChange={setVegOnly}
-              disabled={saving}
-            />
-          </div>
-
-          {/* Zone Display */}
-          {zone && (
+      <div className="page-content p-4 md:p-5 lg:p-6 space-y-8">
+        {/* Kitchen Information */}
+        <div className="box p-6 space-y-6">
+          <h2 className="text-xl font-semibold theme-fc-heading">Kitchen Information</h2>
+          
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Operational Zone</Label>
-              <div className="flex items-center gap-2 theme-fc-light">
-                <MapPin className="w-4 h-4" />
-                <span>{zone.name}</span>
-              </div>
+              <Label htmlFor="displayName">Display Name *</Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="How you want to be known"
+                disabled={saving}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bio">Bio / Story</Label>
+              <Textarea
+                id="bio"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell customers about your kitchen and cooking..."
+                rows={5}
+                disabled={saving}
+              />
               <p className="text-xs theme-fc-light">
-                Zone cannot be changed here. Contact support to change your zone.
+                Share your story, cooking philosophy, or what makes your food special
               </p>
             </div>
-          )}
 
-          {/* Address Display */}
-          {address && (
-            <div className="space-y-2">
-              <Label>Kitchen Address</Label>
-              <div className="theme-fc-light">
-                <p>{address.line1}</p>
-                <p>{address.city}, {address.state} - {address.pincode}</p>
-              </div>
-              <p className="text-xs theme-fc-light">
-                Address cannot be changed here. Update it during onboarding.
-              </p>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="vegOnly">Vegetarian Only Kitchen</Label>
+              <Switch
+                id="vegOnly"
+                checked={vegOnly}
+                onCheckedChange={setVegOnly}
+                disabled={saving}
+              />
             </div>
-          )}
 
-          <Button onClick={handleSave} disabled={saving} size="lg">
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
-              </>
+            {/* Zone Display */}
+            {zone && (
+              <div className="space-y-2">
+                <Label>Operational Zone</Label>
+                <div className="flex items-center gap-2 theme-fc-light">
+                  <MapPin className="w-4 h-4" />
+                  <span>{zone.name}</span>
+                </div>
+                <p className="text-xs theme-fc-light">
+                  Zone cannot be changed here. Contact support to change your zone.
+                </p>
+              </div>
             )}
-          </Button>
+
+            {/* Address Display */}
+            {address && (
+              <div className="space-y-2">
+                <Label>Kitchen Address</Label>
+                <div className="theme-fc-light">
+                  <p>{address.line1}</p>
+                  <p>{address.city}, {address.state} - {address.pincode}</p>
+                </div>
+                <p className="text-xs theme-fc-light">
+                  Address cannot be changed here. Update it during onboarding.
+                </p>
+              </div>
+            )}
+
+            <Button onClick={handleSave} disabled={saving} size="lg">
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </div>
         </div>
+
+        {/* Media Management */}
+        <MediaUploader
+          vendorId={vendor.id}
+          media={media}
+          onMediaUpdate={handleMediaUpdate}
+        />
       </div>
 
-      {/* Media Management */}
-      <MediaUploader
-        vendorId={vendor.id}
-        media={media}
-        onMediaUpdate={handleMediaUpdate}
-      />
     </div>
   )
 }

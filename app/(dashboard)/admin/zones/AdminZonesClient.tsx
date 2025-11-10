@@ -172,12 +172,12 @@ export default function AdminZonesClient({ initialData }: AdminZonesClientProps)
   }
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard-page-content space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="dashboard-page-header flex items-center justify-between flex-wrap gap-4 border-b theme-border-color px-4 py-3 md:py-5 md:px-3 lg:px-6 lg:py-4">
         <div>
-          <h1 className="text-3xl font-bold theme-fc-heading mb-2">Zone Management</h1>
-          <p className="theme-fc-light">Manage operational zones</p>
+          <h1 className="theme-h4">Zone Management</h1>
+          <p className="theme-fc-light mt-1">Manage operational zones</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
@@ -224,140 +224,143 @@ export default function AdminZonesClient({ initialData }: AdminZonesClientProps)
           </DialogContent>
         </Dialog>
       </div>
-
-      {/* Zones List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {zones.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <MapPin className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p className="theme-fc-light">No zones found</p>
-            <Button
-              onClick={() => setShowCreateDialog(true)}
-              className="mt-4"
-              variant="outline"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create First Zone
-            </Button>
-          </div>
-        ) : (
-          zones.map((zone) => (
-            <div key={zone.id} className="box p-6 space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="w-5 h-5 theme-fc-light" />
-                    <h3 className="text-lg font-semibold theme-fc-heading">{zone.name}</h3>
-                  </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant={zone.active ? 'default' : 'secondary'}>
-                      {zone.active ? 'Active' : 'Inactive'}
-                    </Badge>
-                    <span className="text-sm theme-fc-light">
-                      {zone.vendorCount} vendor(s)
-                    </span>
+      
+      <div className="page-content p-4 md:p-5 lg:p-6 space-y-8">
+        {/* Zones List */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {zones.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <MapPin className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <p className="theme-fc-light">No zones found</p>
+              <Button
+                onClick={() => setShowCreateDialog(true)}
+                className="mt-4"
+                variant="outline"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create First Zone
+              </Button>
+            </div>
+          ) : (
+            zones.map((zone) => (
+              <div key={zone.id} className="box p-6 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MapPin className="w-5 h-5 theme-fc-light" />
+                      <h3 className="text-lg font-semibold theme-fc-heading">{zone.name}</h3>
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant={zone.active ? 'default' : 'secondary'}>
+                        {zone.active ? 'Active' : 'Inactive'}
+                      </Badge>
+                      <span className="text-sm theme-fc-light">
+                        {zone.vendorCount} vendor(s)
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex gap-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(zone)}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Edit Zone</DialogTitle>
-                      <DialogDescription>
-                        Update zone name. Polygon editing coming soon.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div>
-                        <Label htmlFor="edit-zone-name">Zone Name *</Label>
-                        <Input
-                          id="edit-zone-name"
-                          value={zoneName}
-                          onChange={(e) => setZoneName(e.target.value)}
-                          placeholder="Zone name"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setEditingZone(null)
-                          setZoneName('')
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleUpdate}
-                        disabled={actionLoading === zone.id || !zoneName.trim()}
-                      >
-                        {actionLoading === zone.id ? 'Saving...' : 'Save Changes'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleToggleActive(zone.id)}
-                  disabled={actionLoading === zone.id}
-                  className={zone.active ? 'text-orange-600' : 'text-green-600'}
-                >
-                  <Power className="w-4 h-4 mr-1" />
-                  {zone.active ? 'Deactivate' : 'Activate'}
-                </Button>
-
-                {!zone.active && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
+                <div className="flex gap-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={actionLoading === zone.id}
-                        className="text-red-600"
+                        onClick={() => handleEdit(zone)}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Zone</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete {zone.name}? This action cannot be undone.
-                          The zone will be permanently removed if there are no active vendors.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDelete(zone.id)}
-                          className="bg-red-600 hover:bg-red-700"
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Edit Zone</DialogTitle>
+                        <DialogDescription>
+                          Update zone name. Polygon editing coming soon.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div>
+                          <Label htmlFor="edit-zone-name">Zone Name *</Label>
+                          <Input
+                            id="edit-zone-name"
+                            value={zoneName}
+                            onChange={(e) => setZoneName(e.target.value)}
+                            placeholder="Zone name"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setEditingZone(null)
+                            setZoneName('')
+                          }}
                         >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleUpdate}
+                          disabled={actionLoading === zone.id || !zoneName.trim()}
+                        >
+                          {actionLoading === zone.id ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleToggleActive(zone.id)}
+                    disabled={actionLoading === zone.id}
+                    className={zone.active ? 'text-orange-600' : 'text-green-600'}
+                  >
+                    <Power className="w-4 h-4 mr-1" />
+                    {zone.active ? 'Deactivate' : 'Activate'}
+                  </Button>
+
+                  {!zone.active && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={actionLoading === zone.id}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Zone</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete {zone.name}? This action cannot be undone.
+                            The zone will be permanently removed if there are no active vendors.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(zone.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
+
     </div>
   )
 }

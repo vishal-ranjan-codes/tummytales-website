@@ -63,7 +63,7 @@ export default function ContactPage() {
   return (
     <main className="site-content">
       {/* Hero Section */}
-      <div className="hero-section relative overflow-hidden border-b theme-border-color bg-[#EA5A36]">
+      <div className="hero-section relative overflow-hidden border-b theme-border-color bg-[#cd2555]">
         <div className="hero-overlay">
           <div className="hero-gradient-circle absolute top-[-200px] w-[600px] opacity-40">
             <div className="w-full h-[600px] bg-gradient-radial from-primary-25 to-transparent rounded-full blur-3xl"></div>

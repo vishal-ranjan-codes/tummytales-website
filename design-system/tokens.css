@@ -19,16 +19,16 @@
   
   /* ------------------------------------------------------------------------ 
      Primary Brand Colors
-     Base: #E82171 (Warm Orange)
+     Base: #cd2555 (Warm Orange)
      Usage: CTAs, links, focus states, brand accents
      ------------------------------------------------------------------------ */
-  --color-primary-100: #E82171;      /* Full opacity - Primary buttons */
-  --color-primary-75: #E82171bf;     /* 75% opacity - Hover states */
-  --color-primary-50: #E8217180;     /* 50% opacity - Disabled states */
-  --color-primary-25: #E8217140;     /* 25% opacity - Subtle backgrounds */
-  --color-primary-12: #E821711f;     /* 12% opacity - Accent backgrounds */
-  --color-primary-08: #E8217114;     /* 8% opacity - Hover backgrounds */
-  --color-primary-05: #E821710d;     /* 5% opacity - Very subtle tints */
+  --color-primary-100: #cd2555;      /* Full opacity - Primary buttons */
+  --color-primary-75: #cd2555bf;     /* 75% opacity - Hover states */
+  --color-primary-50: #cd255580;     /* 50% opacity - Disabled states */
+  --color-primary-25: #cd255540;     /* 25% opacity - Subtle backgrounds */
+  --color-primary-12: #cd25551f;     /* 12% opacity - Accent backgrounds */
+  --color-primary-08: #cd255514;     /* 8% opacity - Hover backgrounds */
+  --color-primary-05: #cd25550d;     /* 5% opacity - Very subtle tints */
 
   /* ------------------------------------------------------------------------ 
      Typography Colors (fc = font-color)

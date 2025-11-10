@@ -90,7 +90,7 @@ export default function DashboardSidebar({ menuItems, dashboardTitle }: Dashboar
                             e.preventDefault()
                           }
                         }}
-                        className="flex items-center gap-3 w-full"
+                        className="flex items-center gap-3 w-full cursor-pointer"
                       >
                         <Icon className={cn('w-5 h-5 flex-shrink-0', isActive && 'text-primary-100')} />
                         <span className="font-medium flex-1">{item.label}</span>

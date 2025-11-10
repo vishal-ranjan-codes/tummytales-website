@@ -45,7 +45,7 @@ export default function DashboardLayout({
             'min-h-screen'
           )}
         >
-          <div className="p-4 md:p-6 lg:p-8">
+          <div className="dashboard-page-content">
             {children}
           </div>
         </main>

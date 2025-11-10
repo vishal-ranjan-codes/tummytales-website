@@ -11,7 +11,7 @@ export type InitialAuth =
   | { isAuthenticated: false }
   | {
       isAuthenticated: true
-      user: { id: string | null; email: string | null }
+      user: { id: string | null; email: string | null; user_metadata?: Record<string, unknown> }
       profile: {
         id: string
         full_name: string

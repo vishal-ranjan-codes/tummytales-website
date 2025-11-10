@@ -1,6 +1,6 @@
 # Supabase Integration Setup
 
-This document explains how the Supabase integration is configured in the Tummy Tales project.
+This document explains how the Supabase integration is configured in the BellyBox project.
 
 ## ✅ What's Already Set Up
 
@@ -269,7 +269,7 @@ Then try generating types again:
 npm run supabase:types
 ```
 
-## 🎯 For Tummy Tales
+## 🎯 For BellyBox
 
 Now you can start building:
 - User authentication (consumers, vendors, riders)

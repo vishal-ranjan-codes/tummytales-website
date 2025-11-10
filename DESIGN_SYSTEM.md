@@ -19,13 +19,13 @@ This design system is built on Tailwind CSS v4.1.4 with custom design tokens and
 ### Light Theme
 
 #### Primary Colors
-- **Primary 100**: `#E82171` - Full opacity for primary buttons and CTAs
-- **Primary 75**: `#E82171bf` - 75% opacity for hover states
-- **Primary 50**: `#E8217180` - 50% opacity for disabled states
-- **Primary 25**: `#E8217140` - 25% opacity for subtle backgrounds
-- **Primary 12**: `#E821711f` - 12% opacity for accent backgrounds
-- **Primary 08**: `#E8217114` - 8% opacity for hover backgrounds
-- **Primary 05**: `#E821710d` - 5% opacity for very subtle tints
+- **Primary 100**: `#cd2555` - Full opacity for primary buttons and CTAs
+- **Primary 75**: `#cd2555bf` - 75% opacity for hover states
+- **Primary 50**: `#cd255580` - 50% opacity for disabled states
+- **Primary 25**: `#cd255540` - 25% opacity for subtle backgrounds
+- **Primary 12**: `#cd25551f` - 12% opacity for accent backgrounds
+- **Primary 08**: `#cd255514` - 8% opacity for hover backgrounds
+- **Primary 05**: `#cd25550d` - 5% opacity for very subtle tints
 
 #### Typography Colors
 - **Heading**: `#262626` - Primary headings with highest contrast

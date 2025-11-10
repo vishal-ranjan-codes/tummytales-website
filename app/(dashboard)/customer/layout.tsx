@@ -39,14 +39,14 @@ const customerMenuItems: MenuItem[] = [
 ]
 
 export default function CustomerLayout({ children }: { children: ReactNode }) {
-  return (
+	return (
     <DashboardLayout
       menuItems={customerMenuItems}
       dashboardTitle="Customer Dashboard"
     >
-      {children}
+			{children}
     </DashboardLayout>
-  )
+	)
 }
 
 

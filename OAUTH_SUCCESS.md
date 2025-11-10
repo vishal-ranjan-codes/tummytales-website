@@ -229,7 +229,7 @@ When you're ready to launch:
 
 ## 🎉 Congratulations!
 
-Your multi-role, multi-auth Tummy Tales app is now fully functional with:
+Your multi-role, multi-auth BellyBox app is now fully functional with:
 - ✅ Google OAuth
 - ✅ Email OTP
 - ✅ Phone OTP

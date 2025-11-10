@@ -5,7 +5,7 @@
  * Account menu for sidebar bottom section
  */
 
-import React from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import {
@@ -25,15 +25,20 @@ import { UserRole } from '@/lib/auth/role-types'
 export default function AccountDropdown() {
   const router = useRouter()
   const { user, profile, signOut, isReady, currentRole } = useAuth()
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
   const handleLogout = async () => {
+    if (isSigningOut) return
+    setIsSigningOut(true)
     try {
       await signOut()
       toast.success('Logged out successfully')
-      router.push('/')
+      router.replace('/')
       router.refresh()
     } catch {
       toast.error('Failed to logout')
+    } finally {
+      setIsSigningOut(false)
     }
   }
 
@@ -60,7 +65,23 @@ export default function AccountDropdown() {
         .toUpperCase()
         .slice(0, 2)
     : (user?.email?.charAt(0).toUpperCase() || 'U')
-  const displayPhotoUrl = profile?.photo_url
+  
+  // Get photo URL with fallback to user metadata (for Google Auth)
+  const getPhotoUrl = () => {
+    // First try profile photo_url
+    if (profile?.photo_url) return profile.photo_url
+    
+    // Fallback to user metadata (Google Auth stores it here)
+    if (user?.user_metadata) {
+      const metadata = user.user_metadata
+      if (metadata && typeof metadata === 'object') {
+        return (metadata as Record<string, unknown>).avatar_url as string | undefined || (metadata as Record<string, unknown>).picture as string | undefined || null
+      }
+    }
+    
+    return null
+  }
+  const displayPhotoUrl = getPhotoUrl()
 
   // Show loading skeleton only during initial auth check (before we know if user exists)
   // Once we know auth state, render optimistically with available data
@@ -194,9 +215,13 @@ export default function AccountDropdown() {
           )
         })()}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400">
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="text-red-600 dark:text-red-400"
+          disabled={isSigningOut}
+        >
           <LogOut className="w-4 h-4 mr-2" />
-          <span>Sign Out</span>
+          <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
