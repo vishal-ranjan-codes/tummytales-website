@@ -37,25 +37,20 @@ export default function MobileAccountMenu({ open, onOpenChange }: MobileAccountM
   const { user, profile, signOut, isReady, roles, currentRole, switchRole } = useAuth()
   const [isSwitching, setIsSwitching] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
-  const [isSigningOut, setIsSigningOut] = useState(false)
 
   useEffect(() => {
     setIsHydrated(true)
   }, [])
 
   const handleLogout = async () => {
-    if (isSigningOut) return
-    setIsSigningOut(true)
     try {
       await signOut()
       toast.success('Logged out successfully')
       onOpenChange(false)
-      router.replace('/')
+      router.push('/')
       router.refresh()
     } catch {
       toast.error('Failed to logout')
-    } finally {
-      setIsSigningOut(false)
     }
   }
 
@@ -269,11 +264,10 @@ export default function MobileAccountMenu({ open, onOpenChange }: MobileAccountM
 
               <button
                 onClick={handleLogout}
-                disabled={isSigningOut}
-                className="w-full flex items-center gap-3 p-3 rounded-lg theme-bg-secondary hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+                className="w-full flex items-center gap-3 p-3 rounded-lg theme-bg-secondary hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="font-medium">{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
+                <span className="font-medium">Sign Out</span>
               </button>
             </div>
           </div>

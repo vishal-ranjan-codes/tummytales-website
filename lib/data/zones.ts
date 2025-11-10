@@ -3,6 +3,8 @@
  * Client-side functions to fetch zones
  */
 
+import { createClient } from '@/lib/supabase/client'
+
 export interface Zone {
   id: string
   name: string
@@ -13,44 +15,38 @@ export interface Zone {
  * Get all active zones
  */
 export async function getActiveZones(): Promise<Zone[]> {
-  try {
-    const response = await fetch('/api/zones', {
-      method: 'GET',
-      cache: 'no-store',
-    })
+  const supabase = createClient()
+  
+  const { data, error } = await supabase
+    .from('zones')
+    .select('id, name, active')
+    .eq('active', true)
+    .order('name')
 
-    if (!response.ok) {
-      console.error('Error fetching zones:', response.statusText)
-      return []
-    }
-
-    const { zones } = (await response.json()) as { zones?: Zone[] }
-    return Array.isArray(zones) ? zones : []
-  } catch (error) {
+  if (error) {
     console.error('Error fetching zones:', error)
     return []
   }
+
+  return data as Zone[]
 }
 
 /**
  * Get zone by ID
  */
 export async function getZoneById(zoneId: string): Promise<Zone | null> {
-  try {
-    const response = await fetch(`/api/zones?id=${encodeURIComponent(zoneId)}`, {
-      method: 'GET',
-      cache: 'no-store',
-    })
+  const supabase = createClient()
+  
+  const { data, error } = await supabase
+    .from('zones')
+    .select('id, name, active')
+    .eq('id', zoneId)
+    .single()
 
-    if (!response.ok) {
-      console.error('Error fetching zone:', response.statusText)
-      return null
-    }
-
-    const { zone } = (await response.json()) as { zone?: Zone | null }
-    return zone ?? null
-  } catch (error) {
+  if (error) {
     console.error('Error fetching zone:', error)
     return null
   }
+
+  return data as Zone
 }

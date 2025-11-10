@@ -1,4 +1,4 @@
-# Getting Started with BellyBox
+# Getting Started with Tummy Tales
 
 ## 🎯 Quick Start Guide
 

@@ -1,5 +1,5 @@
 <!-- 9e7a81d0-0a3f-463d-bbc2-b9ac8c01afe9 873c2bfe-21de-4cbd-bc30-4f8dd834a311 -->
-# BellyBox Development Plan
+# Tummy Tales Development Plan
 
 ## Current State
 
@@ -633,7 +633,7 @@ Refer to these for detailed implementation information.
   - Ratings preview
   - CTA: "Start Trial" / "Subscribe" (disabled with tooltip "Coming in Phase 2")
   - **SEO**:
-    - Dynamic meta title: "[Vendor Name] - Home-Cooked Tiffin in [Zone] | BellyBox"
+    - Dynamic meta title: "[Vendor Name] - Home-Cooked Tiffin in [Zone] | Tummy Tales"
     - Rich meta description with vendor bio excerpt
     - JSON-LD structured data for Restaurant/LocalBusiness
     - Schema.org markup for reviews/ratings

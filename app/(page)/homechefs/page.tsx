@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import HomeChefsClient from './HomeChefsClient'
 import { createClient } from '@/lib/supabase/server'
-import { getActiveZonesServer } from '@/lib/data/zones-server'
+import { getActiveZones } from '@/lib/data/zones'
 import { Skeleton } from '@/components/ui/skeleton'
 
 interface Vendor {
@@ -14,7 +14,6 @@ interface Vendor {
   zone_id: string
   zones?: { id: string; name: string } | { id: string; name: string }[]
   vendor_media?: Array<{ url: string; media_type: string }>
-  created_at?: string
 }
 
 // Server Component - Fetches initial data
@@ -31,7 +30,6 @@ async function getVendors(): Promise<Vendor[]> {
       rating_count,
       veg_only,
       zone_id,
-      created_at,
       zones (
         id,
         name
@@ -78,7 +76,7 @@ export default async function HomeChefsPage() {
   // Fetch data in parallel on server
   const [vendors, zones] = await Promise.all([
     getVendors(),
-    getActiveZonesServer(),
+    getActiveZones(),
   ])
 
   return (

@@ -48,10 +48,8 @@ export default function DailyMenuManager({ vendorId }: VendorMenuClientProps) {
   const [loading, setLoading] = useState(false)
   const [updating, setUpdating] = useState<string | null>(null)
 
-  const loadMeals = async (showLoader = true) => {
-    if (showLoader) {
-      setLoading(true)
-    }
+  const loadMeals = async () => {
+    setLoading(true)
     try {
       const result = await getMealsWithChoiceGroups(vendorId, selectedDate, selectedSlot)
       if (result.success && result.data) {
@@ -63,14 +61,12 @@ export default function DailyMenuManager({ vendorId }: VendorMenuClientProps) {
       console.error('Error loading meals:', error)
       toast.error('An unexpected error occurred')
     } finally {
-      if (showLoader) {
-        setLoading(false)
-      }
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    loadMeals(true)
+    loadMeals()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, selectedSlot, vendorId])
 
@@ -94,7 +90,7 @@ export default function DailyMenuManager({ vendorId }: VendorMenuClientProps) {
       
       if (result.success) {
         toast.success('Availability updated')
-        await loadMeals(false) // Refresh data without resetting the tab UI
+        loadMeals() // Reload to get updated data
       } else {
         toast.error(result.error || 'Failed to update availability')
       }

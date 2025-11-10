@@ -327,7 +327,7 @@ export default function LoginPage() {
   
   return (
     <div className="login-container">
-      <h1>Welcome to BellyBox</h1>
+      <h1>Welcome to Tummy Tales</h1>
       
       {/* OAuth Buttons */}
       {showOAuth && (
@@ -565,7 +565,7 @@ In Supabase Dashboard → Authentication → Email Templates:
 **Confirm Signup Template:**
 
 ```
-<h2>Welcome to BellyBox!</h2>
+<h2>Welcome to Tummy Tales!</h2>
 <p>Your verification code is:</p>
 <h1 style="font-size: 32px; letter-spacing: 8px;">{{ .Token }}</h1>
 <p>Enter this code to complete your signup.</p>
@@ -575,9 +575,9 @@ In Supabase Dashboard → Authentication → Email Templates:
 **Magic Link Template:**
 
 ```
-<h2>Sign in to BellyBox</h2>
+<h2>Sign in to Tummy Tales</h2>
 <p>Click the link below to sign in:</p>
-<a href="{{ .ConfirmationURL }}">Sign in to BellyBox</a>
+<a href="{{ .ConfirmationURL }}">Sign in to Tummy Tales</a>
 <p>Or enter this code manually:</p>
 <h1 style="font-size: 32px; letter-spacing: 8px;">{{ .Token }}</h1>
 ```
@@ -742,7 +742,7 @@ export default function CustomerOnboarding() {
   
   return (
     <div className="onboarding-container">
-      <h1>Welcome to BellyBox!</h1>
+      <h1>Welcome to Tummy Tales!</h1>
       <p>Let's get you started</p>
       <input placeholder="Your Name" value={fullName} onChange={...} />
       <select value={zoneId} onChange={...}>

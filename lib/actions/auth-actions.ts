@@ -8,7 +8,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { UserRole } from '../auth/role-utils'
-import { mergeRoles, resolveDefaultRole } from '../auth/role-helpers'
 
 interface ActionResponse {
   success: boolean
@@ -42,27 +41,38 @@ export async function createCustomerAccount(data: {
       .single()
 
     if (existingProfile) {
-      const mergedRoles = mergeRoles(existingProfile.roles as string[] | null, ['customer'])
+      // Profile exists - just add customer role if not already present
+      const roles = existingProfile.roles || []
+      if (!roles.includes('customer')) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            roles: [...roles, 'customer'],
+            default_role: roles.length === 0 ? 'customer' : existingProfile.default_role,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', user.id)
 
+        if (updateError) {
+          console.error('Error updating profile:', updateError)
+          return { success: false, error: 'Failed to update profile' }
+        }
+      }
+
+      // Update name, zone, phone, and mark onboarding complete
       const updateData: Record<string, unknown> = {
         full_name: data.fullName,
         zone_id: data.zoneId,
         onboarding_completed: true,
-        onboarding_status: 'completed',
-        roles: mergedRoles,
         updated_at: new Date().toISOString(),
       }
-
-      const defaultRoleUpdate = resolveDefaultRole(existingProfile.default_role as string | null, 'customer')
-      if (defaultRoleUpdate) {
-        updateData.default_role = defaultRoleUpdate
-      }
-
+      
+      // Update phone if provided (from phone verification step)
       if (data.phone) {
         updateData.phone = data.phone
         updateData.phone_verified = true
       }
-
+      
       const { error: updateError } = await supabase
         .from('profiles')
         .update(updateData)
@@ -86,7 +96,6 @@ export async function createCustomerAccount(data: {
           zone_id: data.zoneId,
           phone_verified: !!data.phone, // Mark as verified if phone was provided
           onboarding_completed: true,
-          onboarding_status: 'completed',
         })
 
       if (insertError) {
@@ -129,23 +138,28 @@ export async function createVendorAccount(data: {
       .eq('id', user.id)
       .single()
 
-    if (existingProfile) {
-      const mergedRoles = mergeRoles(existingProfile.roles as string[] | null, ['vendor', 'customer'])
+    let profileRoles: string[] = []
 
+    if (existingProfile) {
+      // Profile exists - add vendor role
+      profileRoles = existingProfile.roles || []
+      if (!profileRoles.includes('vendor')) {
+        profileRoles.push('vendor')
+      }
+      if (!profileRoles.includes('customer')) {
+        profileRoles.push('customer') // Always add customer role too
+      }
+
+      // Update profile with phone if provided
       const updateData: Record<string, unknown> = {
         full_name: data.fullName,
-        roles: mergedRoles,
+        roles: profileRoles,
+        default_role: existingProfile.roles.length === 0 ? 'vendor' : existingProfile.default_role,
         zone_id: data.zoneId,
         onboarding_completed: true,
-        onboarding_status: 'completed',
         updated_at: new Date().toISOString(),
       }
-
-      const defaultRoleUpdate = resolveDefaultRole(existingProfile.default_role as string | null, 'vendor')
-      if (defaultRoleUpdate) {
-        updateData.default_role = defaultRoleUpdate
-      }
-
+      
       if (data.phone) {
         updateData.phone = data.phone
         updateData.phone_verified = true
@@ -162,6 +176,8 @@ export async function createVendorAccount(data: {
       }
     } else {
       // Create new profile with vendor and customer roles
+      profileRoles = ['customer', 'vendor']
+      
       const { error: insertError } = await supabase
         .from('profiles')
         .insert({
@@ -169,12 +185,11 @@ export async function createVendorAccount(data: {
           full_name: data.fullName,
           phone: data.phone || user.phone || null,
           email: user.email || null,
-          roles: ['customer', 'vendor'],
+          roles: profileRoles,
           default_role: 'vendor',
           zone_id: data.zoneId,
           phone_verified: !!data.phone,
           onboarding_completed: true,
-          onboarding_status: 'completed',
         })
 
       if (insertError) {
@@ -242,23 +257,28 @@ export async function createRiderAccount(data: {
       .eq('id', user.id)
       .single()
 
-    if (existingProfile) {
-      const mergedRoles = mergeRoles(existingProfile.roles as string[] | null, ['rider', 'customer'])
+    let profileRoles: string[] = []
 
+    if (existingProfile) {
+      // Profile exists - add rider role
+      profileRoles = existingProfile.roles || []
+      if (!profileRoles.includes('rider')) {
+        profileRoles.push('rider')
+      }
+      if (!profileRoles.includes('customer')) {
+        profileRoles.push('customer') // Always add customer role too
+      }
+
+      // Update profile with phone if provided
       const updateData: Record<string, unknown> = {
         full_name: data.fullName,
-        roles: mergedRoles,
+        roles: profileRoles,
+        default_role: existingProfile.roles.length === 0 ? 'rider' : existingProfile.default_role,
         zone_id: data.zoneId,
         onboarding_completed: true,
-        onboarding_status: 'completed',
         updated_at: new Date().toISOString(),
       }
-
-      const defaultRoleUpdate = resolveDefaultRole(existingProfile.default_role as string | null, 'rider')
-      if (defaultRoleUpdate) {
-        updateData.default_role = defaultRoleUpdate
-      }
-
+      
       if (data.phone) {
         updateData.phone = data.phone
         updateData.phone_verified = true
@@ -275,6 +295,8 @@ export async function createRiderAccount(data: {
       }
     } else {
       // Create new profile with rider and customer roles
+      profileRoles = ['customer', 'rider']
+      
       const { error: insertError } = await supabase
         .from('profiles')
         .insert({
@@ -282,12 +304,11 @@ export async function createRiderAccount(data: {
           full_name: data.fullName,
           phone: data.phone || user.phone || null,
           email: user.email || null,
-          roles: ['customer', 'rider'],
+          roles: profileRoles,
           default_role: 'rider',
           zone_id: data.zoneId,
           phone_verified: !!data.phone,
           onboarding_completed: true,
-          onboarding_status: 'completed',
         })
 
       if (insertError) {

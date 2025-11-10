@@ -95,7 +95,6 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
   
   const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isSigningOut, setIsSigningOut] = useState(false)
 
   // If auth context is ready and no user, don't render
   // If auth context is not ready yet but we have initialUser, render (optimistic)
@@ -109,18 +108,13 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
   }
 
   const handleSignOut = async () => {
-    if (isSigningOut) return
-    setIsSigningOut(true)
     try {
       await signOut()
       toast.success('Signed out successfully!')
-      router.replace('/')
-      router.refresh()
+      router.push('/')
     } catch (error) {
       console.error('Sign out error:', error)
       toast.error('Failed to sign out. Please try again.')
-    } finally {
-      setIsSigningOut(false)
     }
   }
 
@@ -296,11 +290,10 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
                 <Button
                   variant="outline"
                   onClick={handleSignOut}
-                  disabled={isSigningOut}
                   className="w-full justify-start gap-3"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
+                  <span>Sign Out</span>
                 </Button>
               </div>
             </div>
@@ -370,13 +363,9 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
         )}
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleSignOut}
-          className="text-red-600 focus:text-red-600"
-          disabled={isSigningOut}
-        >
+        <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">
           <LogOut className="w-4 h-4 mr-2" />
-          <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
+          <span>Sign Out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

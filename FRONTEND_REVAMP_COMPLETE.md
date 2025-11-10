@@ -2,7 +2,7 @@
 
 ## Summary
 
-Successfully revamped the BellyBox frontend with focus on improved UX/usability, better navigation, and enhanced mobile experience.
+Successfully revamped the Tummy Tales frontend with focus on improved UX/usability, better navigation, and enhanced mobile experience.
 
 ---
 

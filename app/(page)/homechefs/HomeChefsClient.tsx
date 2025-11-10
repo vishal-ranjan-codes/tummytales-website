@@ -30,7 +30,6 @@ interface Vendor {
   zone_id: string
   zones?: { id: string; name: string } | { id: string; name: string }[]
   vendor_media?: Array<{ url: string; media_type: string }>
-  created_at?: string
 }
 
 type SortOption = 'rating' | 'name' | 'newest' | 'oldest'
@@ -125,16 +124,10 @@ export default function HomeChefsClient({ initialVendors, initialZones }: HomeCh
           return (b.rating_count || 0) - (a.rating_count || 0)
         case 'name':
           return a.display_name.localeCompare(b.display_name)
-        case 'newest': {
-          const aCreated = a.created_at ? new Date(a.created_at).getTime() : 0
-          const bCreated = b.created_at ? new Date(b.created_at).getTime() : 0
-          return bCreated - aCreated
-        }
-        case 'oldest': {
-          const aCreated = a.created_at ? new Date(a.created_at).getTime() : 0
-          const bCreated = b.created_at ? new Date(b.created_at).getTime() : 0
-          return aCreated - bCreated
-        }
+        case 'newest':
+          return 0
+        case 'oldest':
+          return 0
         default:
           return 0
       }

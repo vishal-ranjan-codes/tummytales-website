@@ -5,7 +5,7 @@
  * Account menu for sidebar bottom section
  */
 
-import React, { useState } from 'react'
+import React from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import {
@@ -25,20 +25,15 @@ import { UserRole } from '@/lib/auth/role-types'
 export default function AccountDropdown() {
   const router = useRouter()
   const { user, profile, signOut, isReady, currentRole } = useAuth()
-  const [isSigningOut, setIsSigningOut] = useState(false)
 
   const handleLogout = async () => {
-    if (isSigningOut) return
-    setIsSigningOut(true)
     try {
       await signOut()
       toast.success('Logged out successfully')
-      router.replace('/')
+      router.push('/')
       router.refresh()
     } catch {
       toast.error('Failed to logout')
-    } finally {
-      setIsSigningOut(false)
     }
   }
 
@@ -215,13 +210,9 @@ export default function AccountDropdown() {
           )
         })()}
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleLogout}
-          className="text-red-600 dark:text-red-400"
-          disabled={isSigningOut}
-        >
+        <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400">
           <LogOut className="w-4 h-4 mr-2" />
-          <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
+          <span>Sign Out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

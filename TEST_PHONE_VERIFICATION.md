@@ -145,7 +145,7 @@ Redirects to Google sign-in...
 ### Step 3: Profile Details (Customer)
 ```
 ┌─────────────────────────────────────┐
-│  Welcome to BellyBox!               │
+│  Welcome to Tummy Tales!            │
 │                                     │
 │  Let's get you started              │
 │                                     │

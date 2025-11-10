@@ -1,4 +1,4 @@
-# PRD - BellyBox Dev Guide
+# PRD - Tummy Tales Dev Guide
 
 # **Product Overview, Vision & Functional Scope**
 
@@ -6,9 +6,9 @@
 
 ## 1️⃣ Product Concept & Vision
 
-# **What is BellyBox?**
+### **What is Tummy Tales?**
 
-BellyBox is a **multi-role, subscription-based home-meal aggregator** that connects
+Tummy Tales is a **multi-role, subscription-based home-meal aggregator** that connects
 
 - **Home chefs / tiffin vendors** who want to sell their meals online, with
 - **Consumers (students, professionals, PG residents)** who want affordable, hygienic, home-cooked food delivered daily, and
@@ -16,7 +16,7 @@ BellyBox is a **multi-role, subscription-based home-meal aggregator** that conne
 
 The platform functions as a **digital marketplace and operations system**—not a cloud kitchen or restaurant.
 
-BellyBox is the **Swiggy-meets-Airbnb for home-cooked food**: chefs run independent kitchens; users subscribe; the system coordinates logistics.
+Tummy Tales is the **Swiggy-meets-Airbnb for home-cooked food**: chefs run independent kitchens; users subscribe; the system coordinates logistics.
 
 ---
 
@@ -25,16 +25,16 @@ BellyBox is the **Swiggy-meets-Airbnb for home-cooked food**: chefs run independ
 > “Make home-cooked food accessible, reliable and scalable — while empowering thousands of homemakers to build micro-businesses.”
 > 
 
-Long-term, BellyBox will become the **nationwide infrastructure layer for homemade meals**, starting with Delhi NCR and expanding city-by-city.
+Long-term, Tummy Tales will become the **nationwide infrastructure layer for homemade meals**, starting with Delhi NCR and expanding city-by-city.
 
 ---
 
 ### **Core Problem Statements**
 
-| Stakeholder | Problem Today | What BellyBox Solves |
+| Stakeholder | Problem Today | What Tummy Tales Solves |
 | --- | --- | --- |
 | **Consumers** (Students/Professionals) | Inconsistent PG food, expensive Swiggy/Zomato orders, lack of nutrition or trust | Affordable, hygienic, subscription-based home-cooked meals |
-| **Vendors (Home Chefs)** | No digital presence, irregular orders, delivery burden | Plug-and-play platform for cooking-only — BellyBox handles tech + ops |
+| **Vendors (Home Chefs)** | No digital presence, irregular orders, delivery burden | Plug-and-play platform for cooking-only — Tummy Tales handles tech + ops |
 | **Riders** | Gig work without steady routes or fixed income | Predictable cluster-based deliveries via subscriptions |
 | **Admin (Platform)** | Fragmented supply and ops visibility | Unified dashboard for vendors, consumers, orders and delivery |
 
@@ -64,7 +64,7 @@ Long-term, BellyBox will become the **nationwide infrastructure layer for homema
 
 Differentiators vs Swiggy/Zomato:
 
-- **Subscription vs On-Demand:** BellyBox runs on planned weekly/monthly meals.
+- **Subscription vs On-Demand:** Tummy Tales runs on planned weekly/monthly meals.
 - **Homemade vs Restaurant:** Supply is local home chefs and tiffin vendors.
 - **Empowerment Model:** Creates earning opportunities for homemakers.
 - **Multi-role System:** Single account can act as consumer, vendor or rider.
@@ -85,7 +85,7 @@ Differentiators vs Swiggy/Zomato:
 ### **High-Level Interaction Flow**
 
 1. **Vendor creates menu + capacity** → approved by Admin
-2. **Consumers subscribe** to vendor plans via BellyBox
+2. **Consumers subscribe** to vendor plans via Tummy Tales
 3. **Orders auto-generate daily** from active subscriptions
 4. **Riders pick up meals** → deliver → OTP confirmation
 5. **System updates status** + payouts + analytics in Admin panel
@@ -1050,7 +1050,7 @@ Server presign endpoint enforces allowed prefixes and user/vendor ownership wher
 
 ## A) Platform Operations Overview
 
-BellyBox runs as a **multi-sided operational system**:
+Tummy Tales runs as a **multi-sided operational system**:
 
 - **Consumers** subscribe and pay online.
 - **Vendors (home chefs)** prepare scheduled meals.
