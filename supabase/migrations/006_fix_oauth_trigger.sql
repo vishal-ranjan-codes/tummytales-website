@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - FIX OAUTH TRIGGER
+-- BELLYBOX - FIX OAUTH TRIGGER
 -- Migration: 006_fix_oauth_trigger.sql
 -- Description: Fix handle_new_user trigger to properly handle all required columns
 -- =====================================================

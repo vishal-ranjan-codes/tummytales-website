@@ -1,12 +1,12 @@
 
 
-export default function RefundPolicyPage() {
+export default function CancellationRefundsPage() {
 
   return (
     <main className="site-content">
       <div className="container mx-auto px-6 py-12 max-sm:px-4 max-sm:py-8">
         <div className="container-max-tab my-8 p-8 theme-bg-color-dark theme-rounded">
-            <h1 className="lb-hero-heading theme-fc-heading w-full leading-6 text-2xl md:text-4xl lg:text-5xl font-medium" style={{ lineHeight: 1.2 }}>Refund Policy</h1>
+            <h1 className="lb-hero-heading theme-fc-heading w-full leading-6 text-2xl md:text-4xl lg:text-5xl font-medium" style={{ lineHeight: 1.2 }}>Cancellation & Refunds</h1>
 
             <section className="mb-8 mt-8">
                 <h2 className="text-2xl theme-fc-heading-light">1. Overview</h2>

@@ -33,7 +33,7 @@ OTP SMS messages are not being received on the phone.
 ### 3. Configure SMS Template (Optional)
 In the Phone provider settings, you can customize the SMS template:
 ```
-Your Tummy Tales verification code is: {{ .Code }}
+Your BellyBox verification code is: {{ .Code }}
 ```
 
 ### 4. Test OTP Configuration

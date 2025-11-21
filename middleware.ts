@@ -11,15 +11,34 @@ export async function middleware(request: NextRequest) {
   
   // Protected routes (require authentication)
   const dashboardRoutes = ['/customer', '/vendor', '/rider', '/admin', '/account']
-  // Make /homechefs public by NOT including it in protectedRoutes
   const protectedRoutes = [...dashboardRoutes]
   const authRoutes = ['/login', '/signup']
-  const onboardingRoutes = ['/onboarding/customer', '/onboarding/vendor', '/onboarding/rider']
+  const onboardingBaseRoute = '/onboarding'
+
+  const pathSegments = path.split('/').filter(Boolean)
+  const basePath = pathSegments.length > 0 ? `/${pathSegments[0]}` : '/'
+  const vendorDashboardSegments = new Set([
+    '',
+    'onboarding',
+    'menu',
+    'profile',
+    'orders',
+    'metrics',
+    'discounts',
+    'earnings',
+    'compliance',
+    'support',
+    'kitchen',
+  ])
+  const vendorSegment = pathSegments[1] ?? ''
+  const isVendorDashboardPath = basePath === '/vendor' && vendorDashboardSegments.has(vendorSegment)
   
-  const isDashboardRoute = dashboardRoutes.some(route => path.startsWith(route))
-  const isProtectedRoute = protectedRoutes.some(route => path.startsWith(route))
-  const isAuthRoute = authRoutes.some(route => path.startsWith(route))
-  const isOnboardingRoute = onboardingRoutes.some(route => path.startsWith(route))
+  const isDashboardRoute =
+    (dashboardRoutes.includes(basePath) && basePath !== '/vendor') || isVendorDashboardPath
+  const isProtectedRoute =
+    (protectedRoutes.includes(basePath) && basePath !== '/vendor') || isVendorDashboardPath
+  const isAuthRoute = authRoutes.includes(basePath)
+  const isOnboardingRoute = basePath === onboardingBaseRoute
   
   // Create Supabase client
   const supabase = createServerClient(

@@ -13,6 +13,7 @@ import {
   Store,
   Users,
   MapPin,
+  Package,
   BarChart,
   Settings,
   HelpCircle,
@@ -40,6 +41,11 @@ const adminMenuItems: MenuItem[] = [
     icon: MapPin,
   },
   {
+    label: 'Plans',
+    href: '/admin/plans',
+    icon: Package,
+  },
+  {
     label: 'Analytics',
     href: '/admin/analytics',
     icon: BarChart,
@@ -55,7 +61,6 @@ const adminMenuItems: MenuItem[] = [
     label: 'Support',
     href: '/admin/support',
     icon: HelpCircle,
-    comingSoon: true,
   },
 ]
 

@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - SEED DATA: DELHI NCR ZONES
+-- BELLYBOX - SEED DATA: DELHI NCR ZONES
 -- Migration: 004_seed_zones.sql
 -- Description: Seed Delhi NCR operational zones
 -- =====================================================

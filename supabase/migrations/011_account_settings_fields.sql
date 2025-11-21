@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - ACCOUNT SETTINGS FIELDS
+-- BELLYBOX - ACCOUNT SETTINGS FIELDS
 -- Migration: 011_account_settings_fields.sql
 -- Description: Add fields for comprehensive account settings
 -- =====================================================

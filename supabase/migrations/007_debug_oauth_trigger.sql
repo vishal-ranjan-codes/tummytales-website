@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - DEBUG OAUTH TRIGGER
+-- BELLYBOX - DEBUG OAUTH TRIGGER
 -- Migration: 007_debug_oauth_trigger.sql
 -- Description: Enhanced error handling and logging for OAuth trigger
 -- =====================================================

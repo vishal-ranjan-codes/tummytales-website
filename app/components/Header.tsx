@@ -152,11 +152,19 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
             aria-label="Main navigation"
           >
             <ul id="primary-menu" className="main-menu-list m-0 p-0 list-none flex flex-wrap gap-1">
+              <li className={`menu-item flex justify-start items-center relative ${pathname === "/homechefs" ? "current-menu-item" : ""}`}>
+                <Link 
+                  href="/homechefs" 
+                  className={`nav-menu-item ${pathname === "/homechefs" ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
+                >
+                  Browse Chefs
+                </Link>
+              </li>
               <li className="menu-item flex justify-start items-center relative">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button type="button" className="nav-menu-item flex items-center gap-1">
-                      Explore
+                      Join Us
                       <ChevronDown className="w-4 h-4" />
                     </button>
                   </DropdownMenuTrigger>
@@ -303,9 +311,18 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
           <nav className="main-navigation mobile p-6">
             <ul className="main-menu-list m-0 p-0 list-none flex flex-wrap gap-4 flex-col">
               <li className="menu-item">
+                <Link 
+                  href="/homechefs" 
+                  className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
+                  onClick={closeMenu}
+                >
+                  Browse Chefs
+                </Link>
+              </li>
+              <li className="menu-item">
                 <div className="flex flex-col gap-2">
                   <span className="text-xs font-semibold uppercase theme-fc-light tracking-wide px-1">
-                    Explore
+                    Join Us
                   </span>
                   <div className="flex flex-col gap-2">
                     {sectionLinks.map(({ id, label }) => (

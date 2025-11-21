@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - BULLETPROOF OAUTH TRIGGER
+-- BELLYBOX - BULLETPROOF OAUTH TRIGGER
 -- Migration: 008_bulletproof_oauth_trigger.sql
 -- Description: Simplified, guaranteed-to-work trigger for OAuth
 -- =====================================================

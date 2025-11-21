@@ -17,7 +17,7 @@ Open in browser: `http://localhost:3000/login`
 ```
 ┌─────────────────────────────────────┐
 │         Welcome Back                │
-│   Sign in to your Tummy Tales       │
+│   Sign in to your BellyBox       │
 │          account                    │
 ├─────────────────────────────────────┤
 │                                     │

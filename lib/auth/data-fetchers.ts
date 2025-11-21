@@ -8,6 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { Meal } from '@/types/meal'
+import type { VendorDeliverySlots } from '@/types/subscription'
 
 // ============================================
 // TYPE DEFINITIONS
@@ -25,6 +26,15 @@ export interface VendorDashboardData {
     rating_count?: number
   } | null
   mealCount: number
+  todayOrders?: {
+    breakfast: number
+    lunch: number
+    dinner: number
+    scheduled: number
+    preparing: number
+    ready: number
+    total: number
+  }
 }
 
 export interface VendorMenuData {
@@ -52,6 +62,7 @@ export interface VendorProfileData {
     zone_id: string | null
     slug: string | null
     kitchen_address_id: string | null
+    delivery_slots: VendorDeliverySlots | null
   } | null
   media: VendorMedia
   zone: { id: string; name: string } | null
@@ -74,8 +85,15 @@ export interface VendorComplianceData {
 }
 
 export interface CustomerDashboardData {
-  subscriptions?: Array<unknown> // Placeholder for future implementation
-  stats?: {
+  subscriptions: Array<{
+    id: string
+    vendor: { id: string; display_name: string }
+    plan_name: string
+    status: string
+    next_delivery: string | null
+    renewal_date: string | null
+  }>
+  stats: {
     activeSubscriptions: number
     ordersThisMonth: number
   }
@@ -208,22 +226,56 @@ export async function getVendorDashboardData(userId: string): Promise<VendorDash
       return { vendor: null, mealCount: 0 }
     }
 
-    // Get meal count in parallel if vendor exists
+    // Get meal count and today's orders in parallel if vendor exists
     let mealCount = 0
-    if (vendorData?.id) {
-      const { count, error: countError } = await supabase
-        .from('meals')
-        .select('*', { count: 'exact', head: true })
-        .eq('vendor_id', vendorData.id)
+    const todayOrders = {
+      breakfast: 0,
+      lunch: 0,
+      dinner: 0,
+      scheduled: 0,
+      preparing: 0,
+      ready: 0,
+      total: 0,
+    }
 
-      if (!countError) {
-        mealCount = count || 0
+    if (vendorData?.id) {
+      const today = new Date().toISOString().split('T')[0]
+      
+      const [mealsResult, ordersResult] = await Promise.all([
+        supabase
+          .from('meals')
+          .select('*', { count: 'exact', head: true })
+          .eq('vendor_id', vendorData.id),
+        supabase
+          .from('orders')
+          .select('id, slot, status')
+          .eq('vendor_id', vendorData.id)
+          .eq('date', today)
+          .in('status', ['scheduled', 'preparing', 'ready']),
+      ])
+
+      if (!mealsResult.error) {
+        mealCount = mealsResult.count || 0
+      }
+
+      if (!ordersResult.error && ordersResult.data) {
+        const orders = ordersResult.data
+        todayOrders.total = orders.length
+        orders.forEach((order: { slot: string; status: string }) => {
+          if (order.slot === 'breakfast') todayOrders.breakfast++
+          if (order.slot === 'lunch') todayOrders.lunch++
+          if (order.slot === 'dinner') todayOrders.dinner++
+          if (order.status === 'scheduled') todayOrders.scheduled++
+          if (order.status === 'preparing') todayOrders.preparing++
+          if (order.status === 'ready') todayOrders.ready++
+        })
       }
     }
 
     return {
       vendor: vendorData,
       mealCount,
+      todayOrders,
     }
   } catch (error) {
     console.error('Error fetching vendor dashboard data:', error)
@@ -300,6 +352,7 @@ export async function getVendorProfileData(userId: string): Promise<VendorProfil
         zone_id,
         slug,
         kitchen_address_id,
+        delivery_slots,
         zones (id, name),
         addresses!kitchen_address_id (id, line1, city, state, pincode)
       `)
@@ -367,6 +420,7 @@ export async function getVendorProfileData(userId: string): Promise<VendorProfil
         zone_id: vendorData.zone_id,
         slug: vendorData.slug,
         kitchen_address_id: vendorData.kitchen_address_id,
+        delivery_slots: vendorData.delivery_slots as VendorDeliverySlots | null,
       },
       media,
       zone,
@@ -403,7 +457,17 @@ export async function getVendorComplianceData(userId: string): Promise<VendorCom
       .single()
 
     if (vendorError) {
-      console.error('Error fetching vendor:', vendorError)
+      // If vendor not found (e.g., user hasn't completed onboarding), return null vendor
+      if (vendorError.code === 'PGRST116') {
+        // PGRST116 = no rows returned
+        console.log('Vendor not found for user:', userId)
+        return { vendor: null }
+      }
+      console.error('Error fetching vendor compliance:', vendorError)
+      return { vendor: null }
+    }
+
+    if (!vendorData) {
       return { vendor: null }
     }
 
@@ -416,7 +480,7 @@ export async function getVendorComplianceData(userId: string): Promise<VendorCom
       },
     }
   } catch (error) {
-    console.error('Error fetching vendor compliance data:', error)
+    console.error('Unexpected error fetching vendor compliance data:', error)
     return { vendor: null }
   }
 }
@@ -427,17 +491,111 @@ export async function getVendorComplianceData(userId: string): Promise<VendorCom
 
 /**
  * Get customer dashboard data
- * Placeholder for future subscriptions/stats
+ * Fetches active subscriptions, orders count, and subscription summaries
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function getCustomerDashboardData(_userId: string): Promise<CustomerDashboardData> {
-  // TODO: Implement when subscriptions feature is ready
-  return {
-    subscriptions: [],
-    stats: {
-      activeSubscriptions: 0,
-      ordersThisMonth: 0,
-    },
+export async function getCustomerDashboardData(userId: string): Promise<CustomerDashboardData> {
+  const supabase = await createClient()
+
+  try {
+    // Get current month start date
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    const today = now.toISOString().split('T')[0]
+
+    // Fetch active subscriptions count and orders this month in parallel
+    const [subscriptionsResult, activeSubscriptionsResult, ordersResult] = await Promise.all([
+      // Get active subscriptions with vendor and plan info (limit to 3 for dashboard)
+      supabase
+        .from('subscriptions')
+        .select(`
+          id,
+          status,
+          renews_on,
+          vendors(id, display_name),
+          plans(id, name)
+        `)
+        .eq('consumer_id', userId)
+        .in('status', ['trial', 'active', 'paused'])
+        .order('created_at', { ascending: false })
+        .limit(3),
+      // Get total active subscriptions count
+      supabase
+        .from('subscriptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('consumer_id', userId)
+        .in('status', ['trial', 'active', 'paused']),
+      // Get orders this month count
+      supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('consumer_id', userId)
+        .gte('created_at', monthStart),
+    ])
+
+    const activeSubscriptionsCount = activeSubscriptionsResult.count || 0
+    const ordersThisMonth = ordersResult.count || 0
+
+    // Process subscription summaries
+    const subscriptions: CustomerDashboardData['subscriptions'] = []
+
+    if (subscriptionsResult.data && subscriptionsResult.data.length > 0) {
+      // Get next delivery dates for each subscription by checking upcoming orders
+      const subscriptionIds = subscriptionsResult.data.map((sub) => sub.id)
+      
+      const { data: upcomingOrders } = await supabase
+        .from('orders')
+        .select('subscription_id, date')
+        .in('subscription_id', subscriptionIds)
+        .gte('date', today)
+        .in('status', ['scheduled', 'preparing'])
+        .order('date', { ascending: true })
+
+      // Group orders by subscription to find next delivery
+      const nextDeliveries = new Map<string, string>()
+      if (upcomingOrders) {
+        const processedSubs = new Set<string>()
+        for (const order of upcomingOrders) {
+          if (!processedSubs.has(order.subscription_id)) {
+            nextDeliveries.set(order.subscription_id, order.date)
+            processedSubs.add(order.subscription_id)
+          }
+        }
+      }
+
+      // Build subscription summaries
+      for (const sub of subscriptionsResult.data) {
+        const vendor = Array.isArray(sub.vendors) ? sub.vendors[0] : sub.vendors
+        const plan = Array.isArray(sub.plans) ? sub.plans[0] : sub.plans
+
+        subscriptions.push({
+          id: sub.id,
+          vendor: vendor
+            ? { id: vendor.id, display_name: vendor.display_name }
+            : { id: '', display_name: 'Unknown Vendor' },
+          plan_name: plan?.name || 'Unknown Plan',
+          status: sub.status,
+          next_delivery: nextDeliveries.get(sub.id) || null,
+          renewal_date: sub.renews_on || null,
+        })
+      }
+    }
+
+    return {
+      subscriptions,
+      stats: {
+        activeSubscriptions: activeSubscriptionsCount,
+        ordersThisMonth,
+      },
+    }
+  } catch (error) {
+    console.error('Error fetching customer dashboard data:', error)
+    return {
+      subscriptions: [],
+      stats: {
+        activeSubscriptions: 0,
+        ordersThisMonth: 0,
+      },
+    }
   }
 }
 

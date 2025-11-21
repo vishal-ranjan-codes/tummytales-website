@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - ROW LEVEL SECURITY POLICIES
+-- BELLYBOX - ROW LEVEL SECURITY POLICIES
 -- Migration: 002_rls_policies.sql
 -- Description: Comprehensive RLS policies for multi-tenant security
 -- =====================================================

@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - STORAGE BUCKETS & POLICIES
+-- BELLYBOX - STORAGE BUCKETS & POLICIES
 -- Migration: 003_storage_setup.sql
 -- Description: Create storage buckets for media and documents
 -- =====================================================

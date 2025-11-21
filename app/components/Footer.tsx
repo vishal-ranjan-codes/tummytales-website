@@ -88,12 +88,12 @@ const Footer = () => {
                     </Link>
                   </li>
                   <li>
-                    <Link href="/refund-policy" className="text-sm theme-fc-light hover:theme-text-primary-color-100 transition-colors">
-                      Refund Policy
+                    <Link href="/cancellation-refunds" className="text-sm theme-fc-light hover:theme-text-primary-color-100 transition-colors">
+                      Cancellation & Refunds
                     </Link>
                   </li>
                   <li>
-                    <Link href="/shipping-and-delivery" className="text-sm theme-fc-light hover:theme-text-primary-color-100 transition-colors">
+                    <Link href="/shipping" className="text-sm theme-fc-light hover:theme-text-primary-color-100 transition-colors">
                       Delivery Policy
                     </Link>
                   </li>

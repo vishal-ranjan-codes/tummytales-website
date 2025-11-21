@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - ENHANCED MEAL ITEMS
+-- BELLYBOX - ENHANCED MEAL ITEMS
 -- Migration: 012_enhanced_meal_items.sql
 -- Description: Add flexible meal items structure with choice groups and optional items
 -- =====================================================

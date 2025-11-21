@@ -189,7 +189,7 @@ export default function AdminVendorDetailClient({
         </div>
         <div className="flex gap-2">
           {vendor.slug && (
-            <Link href={`/vendor/${vendor.slug}`} target="_blank">
+            <Link href={`/vendors/${vendor.slug ?? vendor.id}`} target="_blank">
               <Button variant="outline" size="sm">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 View Public Page

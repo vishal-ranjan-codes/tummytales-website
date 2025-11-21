@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { MealItem } from '@/types/meal'
+import type { VendorDeliverySlots } from '@/types/subscription'
 
 export interface ActionResponse<T = unknown> {
   success: boolean
@@ -322,6 +323,7 @@ export async function updateVendorProfile(
     display_name?: string
     bio?: string
     veg_only?: boolean
+    delivery_slots?: VendorDeliverySlots | null
   }
 ): Promise<ActionResponse> {
   try {
@@ -351,6 +353,14 @@ export async function updateVendorProfile(
     if (data.display_name !== undefined) updateData.display_name = data.display_name
     if (data.bio !== undefined) updateData.bio = data.bio || null
     if (data.veg_only !== undefined) updateData.veg_only = data.veg_only
+    if (data.delivery_slots !== undefined) {
+      const hasSlots =
+        data.delivery_slots &&
+        Object.values(data.delivery_slots).some(
+          (slotList) => slotList && slotList.length > 0
+        )
+      updateData.delivery_slots = hasSlots ? data.delivery_slots : null
+    }
 
     const { data: updated, error } = await supabase
       .from('vendors')

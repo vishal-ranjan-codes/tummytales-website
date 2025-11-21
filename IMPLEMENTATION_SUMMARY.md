@@ -2,7 +2,7 @@
 
 ## Overview
 
-Successfully implemented a flexible, multi-method authentication system with role-based onboarding flows and smart redirects for Tummy Tales.
+Successfully implemented a flexible, multi-method authentication system with role-based onboarding flows and smart redirects for BellyBox.
 
 ## ✅ What Was Implemented
 

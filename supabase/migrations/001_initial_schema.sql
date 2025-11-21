@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - INITIAL DATABASE SCHEMA
+-- BELLYBOX - INITIAL DATABASE SCHEMA
 -- Migration: 001_initial_schema.sql
 -- Description: Core tables for multi-role food delivery platform
 -- =====================================================

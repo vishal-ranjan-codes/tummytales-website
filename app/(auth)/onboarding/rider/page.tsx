@@ -117,16 +117,35 @@ export default function RiderOnboarding() {
       }
       
       // Update profile
-      const { error: profileError } = await supabase
+      const { data: currentProfile } = await supabase
         .from('profiles')
-        .update({
+        .select('roles, default_role, last_used_role')
+        .eq('id', user.id)
+        .single()
+
+      const mergedRoles = Array.from(
+        new Set([...(currentProfile?.roles ?? []), 'rider', 'customer'])
+      )
+
+      const profileUpdate: Record<string, unknown> = {
           full_name: fullName,
           zone_id: zoneId,
           onboarding_completed: true,
-          roles: ['rider', 'customer'],
-          default_role: 'rider',
+        roles: mergedRoles,
           updated_at: new Date().toISOString()
-        })
+      }
+
+      if (!currentProfile?.default_role) {
+        profileUpdate.default_role = 'rider'
+      }
+
+      if (!currentProfile?.last_used_role) {
+        profileUpdate.last_used_role = 'rider'
+      }
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(profileUpdate)
         .eq('id', user.id)
       
       if (profileError) {

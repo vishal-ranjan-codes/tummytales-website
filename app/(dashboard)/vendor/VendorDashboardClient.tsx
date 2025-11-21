@@ -14,6 +14,7 @@ import type { InitialAuth } from '@/lib/auth/types'
 import type { VendorDashboardData } from '@/lib/auth/data-fetchers'
 import { Store, Package, Star, DollarSign } from 'lucide-react'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 interface VendorDashboardClientProps {
   initialAuth: InitialAuth
@@ -88,9 +89,13 @@ export default function VendorDashboardClient({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             title="Today's Orders"
-            value="0"
+            value={initialData.todayOrders?.total.toString() || '0'}
             icon={Package}
-            description="No orders yet"
+            description={
+              initialData.todayOrders?.total
+                ? `${initialData.todayOrders.scheduled} scheduled, ${initialData.todayOrders.preparing} preparing, ${initialData.todayOrders.ready} ready`
+                : 'No orders yet'
+            }
           />
           <StatCard
             title="Menu Items"
@@ -147,6 +152,38 @@ export default function VendorDashboardClient({
                 </Link>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Today's Orders Summary */}
+        {isApproved && initialData.todayOrders && initialData.todayOrders.total > 0 && (
+          <div className="box p-6">
+            <h2 className="text-xl font-semibold theme-fc-heading mb-4">
+              Today&apos;s Orders
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="border rounded-lg p-4">
+                <div className="text-sm theme-fc-light mb-1">Breakfast</div>
+                <div className="text-2xl font-bold theme-fc-heading">
+                  {initialData.todayOrders.breakfast}
+                </div>
+              </div>
+              <div className="border rounded-lg p-4">
+                <div className="text-sm theme-fc-light mb-1">Lunch</div>
+                <div className="text-2xl font-bold theme-fc-heading">
+                  {initialData.todayOrders.lunch}
+                </div>
+              </div>
+              <div className="border rounded-lg p-4">
+                <div className="text-sm theme-fc-light mb-1">Dinner</div>
+                <div className="text-2xl font-bold theme-fc-heading">
+                  {initialData.todayOrders.dinner}
+                </div>
+              </div>
+            </div>
+            <Link href="/vendor/orders">
+              <Button className="w-full">View All Orders</Button>
+            </Link>
           </div>
         )}
 

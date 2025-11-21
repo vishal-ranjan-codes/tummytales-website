@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - FIX RLS FOR TRIGGER
+-- BELLYBOX - FIX RLS FOR TRIGGER
 -- Migration: 009_fix_rls_for_trigger.sql
 -- Description: Ensure RLS doesn't block trigger from creating profiles
 -- =====================================================

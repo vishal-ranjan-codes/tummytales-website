@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     | 'rider'
     | 'admin'
     | null
+  // Preserve return URL from subscription wizard or other flows
+  const returnUrl = requestUrl.searchParams.get('return')
   const error = requestUrl.searchParams.get('error')
   const error_description = requestUrl.searchParams.get('error_description')
   
@@ -73,8 +75,13 @@ export async function GET(request: NextRequest) {
         // New OAuth user - redirect to intended role's signup to complete profile
         // Fall back to customer if no role intent provided
         const targetRole = desiredRole || 'customer'
+        const signupUrl = new URL(`/signup/${targetRole}`, requestUrl.origin)
+        signupUrl.searchParams.set('oauth', 'true')
+        if (returnUrl) {
+          signupUrl.searchParams.set('return', returnUrl)
+        }
         console.log(`✅ [OAuth Callback] New user, redirecting to signup for role: ${targetRole}`)
-        return NextResponse.redirect(`${requestUrl.origin}/signup/${targetRole}?oauth=true`)
+        return NextResponse.redirect(signupUrl.toString())
       }
       
       // Check if phone verification is required and not yet done
@@ -90,16 +97,36 @@ export async function GET(request: NextRequest) {
       if (needsPhoneVerification && !profile.onboarding_completed) {
         // Redirect to signup page with OAuth flag to collect phone
         const role = desiredRole || profile.roles?.[0] || 'customer'
+        const signupUrl = new URL(`/signup/${role}`, requestUrl.origin)
+        signupUrl.searchParams.set('oauth', 'true')
+        signupUrl.searchParams.set('verify_phone', 'true')
+        if (returnUrl) {
+          signupUrl.searchParams.set('return', returnUrl)
+        }
         console.log(`✅ [OAuth Callback] Redirecting to /signup/${role}?oauth=true for phone verification`)
-        return NextResponse.redirect(`${requestUrl.origin}/signup/${role}?oauth=true&verify_phone=true`)
+        return NextResponse.redirect(signupUrl.toString())
       }
       
       // Check if onboarding is complete
       if (!profile.onboarding_completed) {
         // Redirect to appropriate onboarding (respect intended role if provided)
         const role = desiredRole || profile.roles?.[0] || 'customer'
+        const onboardingUrl = new URL(`/onboarding/${role}`, requestUrl.origin)
+        if (returnUrl) {
+          onboardingUrl.searchParams.set('return', returnUrl)
+        }
         console.log(`✅ [OAuth Callback] Redirecting to /onboarding/${role}`)
-        return NextResponse.redirect(`${requestUrl.origin}/onboarding/${role}`)
+        return NextResponse.redirect(onboardingUrl.toString())
+      }
+      
+      // If a return URL was provided (e.g., subscription wizard), honor it
+      if (returnUrl) {
+        const decodedReturnUrl = decodeURIComponent(returnUrl)
+        const redirectTarget = decodedReturnUrl.startsWith('http')
+          ? decodedReturnUrl
+          : `${requestUrl.origin}${decodedReturnUrl.startsWith('/') ? '' : '/'}${decodedReturnUrl}`
+        console.log(`✅ [OAuth Callback] Onboarding complete, redirecting to return URL: ${redirectTarget}`)
+        return NextResponse.redirect(redirectTarget)
       }
       
       // Determine where to redirect based on role

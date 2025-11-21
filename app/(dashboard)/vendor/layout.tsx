@@ -30,7 +30,6 @@ const vendorMenuItems: MenuItem[] = [
     label: 'Orders',
     href: '/vendor/orders',
     icon: ShoppingBag,
-    comingSoon: true,
   },
   {
     label: 'Menu',
@@ -64,13 +63,11 @@ const vendorMenuItems: MenuItem[] = [
     label: 'Compliance',
     href: '/vendor/compliance',
     icon: ShieldCheck,
-    comingSoon: true,
   },
   {
     label: 'Support',
     href: '/vendor/support',
     icon: HelpCircle,
-    comingSoon: true,
   },
 ]
 

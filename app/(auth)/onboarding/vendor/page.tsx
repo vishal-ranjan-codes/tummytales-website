@@ -158,16 +158,35 @@ export default function VendorOnboarding() {
       }
       
       // Update profile
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('roles, default_role, last_used_role')
+        .eq('id', user.id)
+        .single()
+
+      const mergedRoles = Array.from(
+        new Set([...(currentProfile?.roles ?? []), 'vendor', 'customer'])
+      )
+
+      const profileUpdate: Record<string, unknown> = {
+        full_name: homechefName,
+        zone_id: zoneId,
+        onboarding_completed: true,
+        roles: mergedRoles,
+        updated_at: new Date().toISOString()
+      }
+
+      if (!currentProfile?.default_role) {
+        profileUpdate.default_role = 'vendor'
+      }
+
+      if (!currentProfile?.last_used_role) {
+        profileUpdate.last_used_role = 'vendor'
+      }
+
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({
-          full_name: homechefName,
-          zone_id: zoneId,
-          onboarding_completed: true,
-          roles: ['vendor', 'customer'],
-          default_role: 'vendor',
-          updated_at: new Date().toISOString()
-        })
+        .update(profileUpdate)
         .eq('id', user.id)
       
       if (profileError) {

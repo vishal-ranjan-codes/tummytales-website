@@ -2,7 +2,7 @@
 
 ## Summary
 
-Phase 0 of the Tummy Tales platform has been successfully implemented. All foundational components are in place for a multi-role, subscription-based food delivery platform.
+Phase 0 of the BellyBox platform has been successfully implemented. All foundational components are in place for a multi-role, subscription-based food delivery platform.
 
 ---
 

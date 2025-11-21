@@ -257,7 +257,13 @@ function CustomerSignupContent() {
       
       if (result.success) {
         toast.success('Account created successfully')
-        router.push('/homechefs')
+        // Check if there's a return URL (e.g., from subscription wizard)
+        const returnUrl = searchParams.get('return')
+        if (returnUrl) {
+          router.push(decodeURIComponent(returnUrl))
+        } else {
+          router.push('/homechefs')
+        }
       } else {
         setDetailsError(result.error || 'Failed to create account')
         setIsLoading(false)

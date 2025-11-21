@@ -1,5 +1,5 @@
 -- =====================================================
--- TUMMY TALES - EMAIL & OAUTH AUTHENTICATION
+-- BELLYBOX - EMAIL & OAUTH AUTHENTICATION
 -- Migration: 005_email_oauth_auth.sql
 -- Description: Add support for email and OAuth authentication
 -- =====================================================

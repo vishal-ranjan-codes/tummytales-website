@@ -144,8 +144,8 @@ export default function ContactPage() {
                      <Link href="/terms-and-conditions" className="block theme-fc-light hover:text-primary-100 transition-colors">
                        Terms & Conditions
                      </Link>
-                     <Link href="/refund-policy" className="block theme-fc-light hover:text-primary-100 transition-colors">
-                       Refund Policy
+                    <Link href="/cancellation-refunds" className="block theme-fc-light hover:text-primary-100 transition-colors">
+                      Cancellation & Refunds
                      </Link>
                    </div>
                  </div>

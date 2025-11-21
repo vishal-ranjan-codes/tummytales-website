@@ -11,6 +11,8 @@ import SubscriptionButton from './SubscriptionButton'
 
 interface VendorHeroProps {
   vendor: {
+    id: string
+    slug?: string | null
     display_name: string
     rating_avg?: number | null
     rating_count?: number
@@ -117,6 +119,7 @@ export default function VendorHero({ vendor, zone, profileImage, coverImage }: V
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <SubscriptionButton 
                   vendorName={vendor.display_name}
+                  vendorSlug={vendor.slug || vendor.id}
                   size="lg"
                 />
                 <Button variant="outline" size="lg">

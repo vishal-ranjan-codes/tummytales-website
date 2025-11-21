@@ -70,13 +70,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
     {
-      url: `${baseUrl}/refund-policy`,
+      url: `${baseUrl}/cancellation-refunds`,
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.3,
     },
     {
-      url: `${baseUrl}/shipping-and-delivery`,
+      url: `${baseUrl}/shipping`,
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.3,

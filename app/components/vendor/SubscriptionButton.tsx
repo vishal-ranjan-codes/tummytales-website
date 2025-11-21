@@ -6,12 +6,14 @@
  * Will be connected to subscription flow in future phase
  */
 
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { ShoppingCart } from 'lucide-react'
 
 interface SubscriptionButtonProps {
   vendorName: string
+  vendorSlug?: string
   variant?: 'default' | 'outline' | 'ghost' | 'secondary'
   size?: 'default' | 'sm' | 'lg' | 'icon'
   className?: string
@@ -19,18 +21,23 @@ interface SubscriptionButtonProps {
 }
 
 export default function SubscriptionButton({
-  vendorName,
+  vendorSlug,
   variant = 'default',
   size = 'lg',
   className = '',
   fullWidth = false,
 }: SubscriptionButtonProps) {
+  const router = useRouter()
+
   const handleSubscribe = () => {
-    // Demo functionality - show toast notification
-    toast.success(`Subscription feature coming soon!`, {
-      description: `You'll be able to subscribe to ${vendorName} soon.`,
-      duration: 3000,
-    })
+    if (vendorSlug) {
+      router.push(`/vendors/${vendorSlug}/subscribe`)
+    } else {
+      toast.error('Vendor slug not available', {
+        description: 'Unable to navigate to subscription page.',
+        duration: 3000,
+      })
+    }
   }
 
   return (

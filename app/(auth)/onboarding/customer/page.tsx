@@ -5,8 +5,8 @@
  * Simple single-step form to collect name and zone
  */
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getActiveZones } from '@/lib/data/zones'
 import { validateFullName } from '@/lib/auth/validators'
@@ -16,8 +16,9 @@ import { Button } from '@/components/ui/button'
 import AuthError from '@/app/components/auth/AuthError'
 import { toast } from 'sonner'
 
-export default function CustomerOnboarding() {
+function CustomerOnboardingContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [fullName, setFullName] = useState('')
   const [zoneId, setZoneId] = useState('')
   const [zones, setZones] = useState<Array<{ id: string; name: string }>>([])
@@ -81,7 +82,14 @@ export default function CustomerOnboarding() {
       }
       
       toast.success('Welcome to BellyBox!')
+      
+      // Check if there's a return URL (e.g., from subscription wizard)
+      const returnUrl = searchParams.get('return')
+      if (returnUrl) {
+        router.push(decodeURIComponent(returnUrl))
+      } else {
       router.push('/homechefs')
+      }
     } catch (err) {
       console.error('Onboarding error:', err)
       setError('An unexpected error occurred')
@@ -157,6 +165,20 @@ export default function CustomerOnboarding() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function CustomerOnboarding() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-10 text-center">
+          <p className="theme-fc-light">Loading onboarding flow...</p>
+        </div>
+      }
+    >
+      <CustomerOnboardingContent />
+    </Suspense>
   )
 }
 

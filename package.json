@@ -16,7 +16,8 @@
     "supabase:migration:new": "npx supabase migration new",
     "supabase:db:reset": "npx supabase db reset",
     "supabase:db:push": "npx supabase db push",
-    "verify:supabase": "tsx scripts/verify-supabase.ts"
+    "verify:supabase": "tsx scripts/verify-supabase.ts",
+    "test:orders": "tsx scripts/test-order-generation.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.920.0",
@@ -57,6 +58,7 @@
     "motion": "^12.23.12",
     "next": "^15.3.1",
     "next-themes": "^0.4.6",
+    "razorpay": "^2.9.6",
     "react": "^19.0.0",
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.0.0",
@@ -79,7 +81,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",
-    "supabase": "^2.53.6",
+    "supabase": "^2.58.5",
     "tailwindcss": "^4.1.4",
     "tsx": "^4.20.6",
     "typescript": "^5"

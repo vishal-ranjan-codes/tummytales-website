@@ -26,7 +26,7 @@ interface VendorCardProps {
 }
 
 export default function VendorCard({ vendor, zone, coverImage }: VendorCardProps) {
-  const href = vendor.slug ? `/vendor/${vendor.slug}` : `/vendor/${vendor.id}`
+  const href = vendor.slug ? `/vendors/${vendor.slug}` : `/vendors/${vendor.id}`
   const defaultImage = '/images/placeholder-vendor.jpg'
   
   return (
