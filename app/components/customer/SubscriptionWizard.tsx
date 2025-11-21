@@ -28,6 +28,11 @@ import { createPaymentOrder } from '@/lib/payments/payment-actions'
 import { formatCurrency } from '@/lib/utils/payment'
 import { InlineLogin } from '@/app/components/customer/InlineLogin'
 import { AddressFormModal } from '@/app/components/customer/AddressFormModal'
+import {
+  saveWizardState,
+  loadWizardState,
+  clearWizardState,
+} from '@/lib/utils/subscription-wizard-storage'
 // Note: Razorpay key will be accessed via window.process or env var in client
 import type { Plan, MealPrefInput, MealSlot, VendorDeliverySlots } from '@/types/subscription'
 
@@ -79,6 +84,20 @@ export default function SubscriptionWizard({
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [addresses, setAddresses] = useState(initialAddresses)
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
+
+  // Restore wizard state from sessionStorage on mount
+  useEffect(() => {
+    const restoredState = loadWizardState(vendor.id, plans)
+    if (restoredState) {
+      // Find and restore the selected plan
+      const plan = plans.find((p) => p.id === restoredState.selectedPlanId)
+      if (plan) {
+        setSelectedPlan(plan)
+        setMealPrefs(restoredState.mealPrefs)
+        setDeliverySchedule(restoredState.deliverySchedule)
+      }
+    }
+  }, [vendor.id, plans])
 
   // Check for step query parameter (e.g., when returning from onboarding)
   useEffect(() => {
@@ -143,8 +162,9 @@ export default function SubscriptionWizard({
   }
 
   // Initialize meal prefs when plan is selected (without meal selection)
+  // Only initialize if mealPrefs is empty (not restored from storage)
   useEffect(() => {
-    if (selectedPlan) {
+    if (selectedPlan && mealPrefs.length === 0) {
       const prefs: MealPrefInput[] = []
       if (selectedPlan.meals_per_day.breakfast) {
         prefs.push({
@@ -174,7 +194,27 @@ export default function SubscriptionWizard({
         dinner: selectedPlan.meals_per_day.dinner ? [1, 2, 3, 4, 5] : [],
       })
     }
-  }, [selectedPlan])
+  }, [selectedPlan, mealPrefs.length])
+
+  // Auto-save wizard state when plan is selected or user is on Step 2 or 3
+  useEffect(() => {
+    if (selectedPlan) {
+      // Save state when:
+      // 1. User is on Step 1 with a plan selected (save plan selection)
+      // 2. User is on Step 2 or 3 (save full state including meal prefs)
+      if (step === 1 || step === 2 || step === 3) {
+        saveWizardState(vendor.id, selectedPlan.id, mealPrefs, deliverySchedule)
+      }
+    }
+  }, [selectedPlan, mealPrefs, deliverySchedule, step, vendor.id])
+
+  // Clear state when navigating away from success step
+  useEffect(() => {
+    if (step === 5) {
+      // State is already cleared in payment handler, but ensure it's cleared here too
+      clearWizardState(vendor.id)
+    }
+  }, [step, vendor.id])
   
   // Helper function to format time slot for display
   const formatTimeSlot = (start: string, end: string): string => {
@@ -313,6 +353,8 @@ export default function SubscriptionWizard({
           handler: async function (_response: unknown) {
             try {
               // Payment successful - webhook will handle activation
+              // Clear wizard state since subscription is complete
+              clearWizardState(vendor.id)
               // Move to success step
               setStep(5)
               toast.success('Payment successful!')
