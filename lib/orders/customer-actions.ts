@@ -70,6 +70,72 @@ export async function getUserOrders(
 }
 
 /**
+ * Get upcoming orders for a specific subscription
+ */
+export async function getUpcomingOrdersBySubscription(
+  subscriptionId: string,
+  limit: number = 7
+): Promise<ActionResponse<OrderWithDetails[]>> {
+  try {
+    const supabase = await createClient()
+    
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { success: false, error: 'Not authenticated' }
+    }
+    
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Get upcoming orders for this subscription
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        subscriptions(*),
+        meals(id, name, image_url, slot),
+        vendors(id, display_name, slug),
+        profiles!orders_consumer_id_fkey(id, full_name),
+        addresses!orders_delivery_address_id_fkey(id, line1, line2, city, state, pincode)
+      `)
+      .eq('subscription_id', subscriptionId)
+      .eq('consumer_id', user.id)
+      .gte('date', today)
+      .in('status', ['scheduled', 'preparing', 'ready'])
+      .order('date', { ascending: true })
+      .limit(limit)
+    
+    if (error) {
+      console.error('Error fetching upcoming orders:', error)
+      return { success: false, error: 'Failed to fetch upcoming orders' }
+    }
+    
+    // Transform to OrderWithDetails
+    const ordersWithDetails: OrderWithDetails[] = (orders || []).map((order) => {
+      const subscription = Array.isArray(order.subscriptions) ? order.subscriptions[0] : order.subscriptions
+      const meal = Array.isArray(order.meals) ? order.meals[0] : order.meals
+      const vendor = Array.isArray(order.vendors) ? order.vendors[0] : order.vendors
+      const consumer = Array.isArray(order.profiles) ? order.profiles[0] : order.profiles
+      const address = Array.isArray(order.addresses) ? order.addresses[0] : order.addresses
+      
+      return {
+        ...order,
+        subscription: subscription || undefined,
+        meal: meal || undefined,
+        vendor: vendor || undefined,
+        consumer: consumer || undefined,
+        delivery_address: address || undefined,
+      } as OrderWithDetails
+    })
+    
+    return { success: true, data: ordersWithDetails }
+  } catch (error: unknown) {
+    console.error('Unexpected error fetching upcoming orders:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+/**
  * Get order details with related data
  */
 export async function getOrderDetails(

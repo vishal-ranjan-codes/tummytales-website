@@ -23,33 +23,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Pause, Play, X, CreditCard, Calendar } from 'lucide-react'
+import { Pause, Play, X, CreditCard, Calendar, Eye } from 'lucide-react'
 import { toast } from 'sonner'
+import Link from 'next/link'
 import {
   pauseSubscription,
   resumeSubscription,
-  cancelSubscription,
 } from '@/lib/subscriptions/subscription-actions'
-import { formatDateShort } from '@/lib/utils/subscription'
+import { formatDateShort, getWeekdayName } from '@/lib/utils/subscription'
 import { formatCurrency } from '@/lib/utils/payment'
-import type { Subscription } from '@/types/subscription'
+import type { SubscriptionWithDetails } from '@/types/subscription'
 import { createPaymentOrder } from '@/lib/payments/payment-actions'
+import { MapPin, Package, Clock } from 'lucide-react'
+import EmptySubscriptionsState from '@/app/components/subscriptions/EmptySubscriptionsState'
+import CancelSubscriptionDialog from '@/app/components/subscriptions/CancelSubscriptionDialog'
 
 interface CustomerSubscriptionsClientProps {
-  initialSubscriptions: Subscription[]
+  initialSubscriptions: (SubscriptionWithDetails & { next_delivery?: string | null })[]
 }
 
 export default function CustomerSubscriptionsClient({
@@ -59,10 +51,41 @@ export default function CustomerSubscriptionsClient({
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_cancelDialogOpen, setCancelDialogOpen] = useState(false)
-  const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionWithDetails | null>(null)
   const [pauseUntil, setPauseUntil] = useState<string>('')
+
+  // Helper function to format address
+  const formatAddress = (address: SubscriptionWithDetails['delivery_address']) => {
+    if (!address) return 'No address'
+    const parts = [address.line1]
+    if (address.line2) parts.push(address.line2)
+    parts.push(`${address.city}, ${address.state} - ${address.pincode}`)
+    return parts.join(', ')
+  }
+
+  // Helper function to get next delivery date
+  const getNextDeliveryDate = (subscription: SubscriptionWithDetails & { next_delivery?: string | null }) => {
+    // Use next_delivery from server if available, otherwise fallback to renews_on
+    return subscription.next_delivery || subscription.renews_on || null
+  }
+
+  // Helper function to format meal preferences summary
+  const formatMealPreferencesSummary = (subscription: SubscriptionWithDetails) => {
+    if (!subscription.prefs || subscription.prefs.length === 0) {
+      return 'No preferences set'
+    }
+
+    const slots = subscription.prefs.map((pref) => {
+      const slotName = pref.slot.charAt(0).toUpperCase() + pref.slot.slice(1)
+      const days = pref.days_of_week
+        .map((day) => getWeekdayName(day).substring(0, 3))
+        .join(', ')
+      return `${slotName} (${days})`
+    })
+
+    return slots.join(' • ')
+  }
 
   // Filter subscriptions
   const filteredSubscriptions = useMemo(() => {
@@ -128,29 +151,12 @@ export default function CustomerSubscriptionsClient({
     }
   }
 
-  const handleCancel = async () => {
-    if (!selectedSubscription) return
-
-    setActionLoading(selectedSubscription.id)
-    try {
-      const result = await cancelSubscription(selectedSubscription.id)
-      if (result.success) {
-        toast.success('Subscription cancelled')
-        setCancelDialogOpen(false)
-        setSelectedSubscription(null)
-        window.location.reload()
-      } else {
-        toast.error(result.error || 'Failed to cancel subscription')
-      }
-    } catch (error) {
-      console.error('Error cancelling subscription:', error)
-      toast.error('An unexpected error occurred')
-    } finally {
-      setActionLoading(null)
-    }
+  const handleCancelClick = (subscription: SubscriptionWithDetails) => {
+    setSelectedSubscription(subscription)
+    setCancelDialogOpen(true)
   }
 
-  const handleRenew = async (subscription: Subscription) => {
+  const handleRenew = async (subscription: SubscriptionWithDetails) => {
     setActionLoading(subscription.id)
     try {
       // First, create payment order
@@ -230,38 +236,84 @@ export default function CustomerSubscriptionsClient({
         {/* Subscriptions List */}
         <div className="space-y-4">
           {filteredSubscriptions.length === 0 ? (
-            <div className="box text-center py-12">
-              <p className="theme-fc-light">No subscriptions found</p>
-            </div>
+            <EmptySubscriptionsState />
           ) : (
-            filteredSubscriptions.map((subscription) => (
+            filteredSubscriptions.map((subscription) => {
+              const nextDelivery = getNextDeliveryDate(subscription)
+              return (
               <div key={subscription.id} className="box p-6 space-y-4">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
+                  <div className="space-y-3 flex-1">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <h3 className="text-lg font-semibold theme-fc-heading">
-                        Subscription #{subscription.id.slice(0, 8)}
+                        {subscription.vendor ? (
+                          <Link 
+                            href={subscription.vendor.slug ? `/vendor/${subscription.vendor.slug}` : '#'}
+                            className="hover:underline"
+                          >
+                            {subscription.vendor.display_name}
+                          </Link>
+                        ) : (
+                          `Subscription #${subscription.id.slice(0, 8)}`
+                        )}
                       </h3>
                       {getStatusBadge(subscription.status)}
                     </div>
-                    <div className="flex items-center gap-4 text-sm theme-fc-light">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
+                    
+                    {subscription.plan && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Package className="w-4 h-4 theme-fc-light" />
+                        <span className="theme-fc-heading font-medium">{subscription.plan.name}</span>
+                        {subscription.plan.description && (
+                          <span className="theme-fc-light">- {subscription.plan.description}</span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div className="flex items-center gap-2 theme-fc-light">
+                        <Calendar className="w-4 h-4 flex-shrink-0" />
                         <span>Started: {formatDateShort(subscription.starts_on)}</span>
                       </div>
                       {subscription.renews_on && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
+                        <div className="flex items-center gap-2 theme-fc-light">
+                          <Calendar className="w-4 h-4 flex-shrink-0" />
                           <span>Renews: {formatDateShort(subscription.renews_on)}</span>
                         </div>
                       )}
+                      {nextDelivery && (
+                        <div className="flex items-center gap-2 theme-fc-heading">
+                          <Clock className="w-4 h-4 flex-shrink-0" />
+                          <span>Next delivery: {formatDateShort(nextDelivery)}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 theme-fc-heading">
+                        <CreditCard className="w-4 h-4 flex-shrink-0" />
+                        <span>{formatCurrency(subscription.price, subscription.currency)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-sm theme-fc-heading">
-                      <CreditCard className="w-4 h-4" />
-                      <span>{formatCurrency(subscription.price, subscription.currency)}</span>
-                    </div>
+
+                    {subscription.delivery_address && (
+                      <div className="flex items-start gap-2 text-sm theme-fc-light">
+                        <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <span>{formatAddress(subscription.delivery_address)}</span>
+                      </div>
+                    )}
+
+                    {subscription.prefs && subscription.prefs.length > 0 && (
+                      <div className="text-sm theme-fc-light">
+                        <span className="font-medium theme-fc-heading">Meal preferences: </span>
+                        {formatMealPreferencesSummary(subscription)}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/customer/subscriptions/${subscription.id}`}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Details
+                      </Link>
+                    </Button>
                     {subscription.status === 'active' && (
                       <>
                         {subscription.renews_on && new Date(subscription.renews_on) <= new Date() && (
@@ -299,44 +351,21 @@ export default function CustomerSubscriptionsClient({
                         Resume
                       </Button>
                     )}
-                    {(subscription.status === 'active' || subscription.status === 'paused') && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={actionLoading === subscription.id}
-                          >
-                            <X className="w-4 h-4 mr-2" />
-                            Cancel
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to cancel this subscription? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => {
-                                setSelectedSubscription(subscription)
-                                handleCancel()
-                              }}
-                              className="bg-red-500 hover:bg-red-600"
-                            >
-                              Cancel Subscription
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                    {(subscription.status === 'active' || subscription.status === 'paused' || subscription.status === 'trial') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={actionLoading === subscription.id}
+                        onClick={() => handleCancelClick(subscription)}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                      </Button>
                     )}
                   </div>
                 </div>
               </div>
-            ))
+            )})
           )}
         </div>
       </div>
@@ -375,6 +404,17 @@ export default function CustomerSubscriptionsClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Subscription Dialog */}
+      {selectedSubscription && (
+        <CancelSubscriptionDialog
+          subscriptionId={selectedSubscription.id}
+          subscriptionPrice={selectedSubscription.price}
+          currency={selectedSubscription.currency}
+          isOpen={cancelDialogOpen}
+          onOpenChange={setCancelDialogOpen}
+        />
+      )}
     </div>
   )
 }

@@ -29,6 +29,7 @@ const hiddenRules: Array<{ path: string; exact?: boolean }> = [
   { path: '/vendor' },
   { path: '/rider' },
   { path: '/admin' },
+  { path: '/customer' },
 ]
 
 function isTransparentPath(pathname: string): boolean {

@@ -346,3 +346,134 @@ export async function getUserPayments(): Promise<ActionResponse<Payment[]>> {
   }
 }
 
+/**
+ * Retry failed payment
+ * Creates a new Razorpay order for retry
+ */
+export async function retryFailedPayment(
+  paymentId: string
+): Promise<ActionResponse<{ paymentOrder: RazorpayOrderResponse; amount: number }>> {
+  try {
+    const supabase = await createClient()
+    
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { success: false, error: 'Not authenticated' }
+    }
+    
+    // Get payment
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select('id, consumer_id, subscription_id, amount, currency, status')
+      .eq('id', paymentId)
+      .single()
+    
+    if (paymentError || !payment) {
+      return { success: false, error: 'Payment not found' }
+    }
+    
+    // Verify ownership
+    if (payment.consumer_id !== user.id) {
+      return { success: false, error: 'Unauthorized' }
+    }
+    
+    // Only allow retry for failed payments
+    if (payment.status !== 'failed') {
+      return { success: false, error: `Cannot retry payment with status: ${payment.status}` }
+    }
+    
+    // Get subscription to verify it still exists and is valid
+    if (payment.subscription_id) {
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('id, status')
+        .eq('id', payment.subscription_id)
+        .single()
+      
+      if (!subscription || (subscription.status !== 'trial' && subscription.status !== 'active')) {
+        return { success: false, error: 'Subscription is not in a valid state for payment' }
+      }
+    }
+    
+    // Create new Razorpay order
+    const receipt = `retry_${paymentId.substring(0, 20)}${Date.now().toString().slice(-6)}`
+    const notes = {
+      payment_id: paymentId,
+      consumer_id: user.id,
+      subscription_id: payment.subscription_id || '',
+      retry: 'true',
+    }
+    
+    const razorpayOrder = await createRazorpayOrder(
+      payment.amount,
+      payment.currency || 'INR',
+      receipt,
+      notes
+    )
+    
+    return {
+      success: true,
+      data: {
+        paymentOrder: razorpayOrder,
+        amount: payment.amount,
+      },
+    }
+  } catch (error: unknown) {
+    console.error('Unexpected error retrying payment:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+/**
+ * Get payment invoice URL
+ * Generates or retrieves invoice URL from Razorpay
+ */
+export async function getPaymentInvoice(
+  paymentId: string
+): Promise<ActionResponse<{ invoiceUrl: string }>> {
+  try {
+    const supabase = await createClient()
+    
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { success: false, error: 'Not authenticated' }
+    }
+    
+    // Get payment
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select('id, consumer_id, provider_payment_id, status')
+      .eq('id', paymentId)
+      .single()
+    
+    if (paymentError || !payment) {
+      return { success: false, error: 'Payment not found' }
+    }
+    
+    // Verify ownership
+    if (payment.consumer_id !== user.id) {
+      return { success: false, error: 'Unauthorized' }
+    }
+    
+    // Only generate invoice for successful payments
+    if (payment.status !== 'success') {
+      return { success: false, error: 'Invoice is only available for successful payments' }
+    }
+    
+    // For Razorpay, we can generate invoice URL
+    // In production, this would call Razorpay API to generate invoice
+    // For now, return a placeholder URL that can be enhanced later
+    const invoiceUrl = `/api/payments/invoice/${paymentId}`
+    
+    return {
+      success: true,
+      data: { invoiceUrl },
+    }
+  } catch (error: unknown) {
+    console.error('Unexpected error getting invoice:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
