@@ -52,6 +52,8 @@ export async function POST(request: NextRequest) {
       case 'payment.captured':
         // Payment is successfully captured
         await handlePaymentCaptured(event)
+        // Also check if it's an invoice payment
+        await handleInvoicePaymentCaptured(event)
         break
         
       case 'payment.failed':
@@ -331,5 +333,90 @@ async function handlePaymentRefunded(event: RazorpayWebhookEvent) {
   
   // Optionally cancel subscription if full refund
   // This depends on business logic - for now, we just update payment status
+}
+
+/**
+ * Handle invoice payment captured (new system)
+ */
+async function handleInvoicePaymentCaptured(event: RazorpayWebhookEvent) {
+  const payment = event.payload.payment?.entity
+  const order = event.payload.order?.entity
+  
+  if (!payment || !order) {
+    return
+  }
+  
+  try {
+    const supabase = await createClient()
+    
+    // Check if this is an invoice payment (has invoice_id in notes)
+    const notes = payment.notes || order.notes || {}
+    const invoiceId = notes.invoice_id
+    
+    if (!invoiceId) {
+      // Not an invoice payment, skip
+      return
+    }
+    
+    // Update invoice status
+    const { error: invoiceError } = await supabase
+      .from('invoices')
+      .update({
+        status: 'paid',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', invoiceId)
+    
+    if (invoiceError) {
+      console.error('Error updating invoice status:', invoiceError)
+      return
+    }
+    
+    // Check if payment record already exists
+    const { data: existingPayment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('provider_payment_id', payment.id)
+      .single()
+    
+    if (!existingPayment) {
+      // Create payment record
+      await supabase
+        .from('payments')
+        .insert({
+          invoice_id: invoiceId,
+          consumer_id: notes.consumer_id,
+          provider: 'razorpay',
+          provider_payment_id: payment.id,
+          provider_order_id: order.id,
+          amount: payment.amount / 100, // Convert paise to rupees
+          currency: payment.currency,
+          status: 'success',
+          metadata: {
+            captured_at: new Date().toISOString(),
+            payment_method: payment.method,
+          },
+        })
+    } else {
+      // Update existing payment
+      await supabase
+        .from('payments')
+        .update({
+          status: 'success',
+          invoice_id: invoiceId,
+          metadata: {
+            captured_at: new Date().toISOString(),
+            payment_method: payment.method,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingPayment.id)
+    }
+    
+    console.log(`Invoice ${invoiceId} payment captured successfully`)
+  } catch (error) {
+    console.error('Error handling invoice payment captured:', error)
+    // Don't throw - webhook should still return 200
+  }
 }
 
