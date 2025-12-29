@@ -27,6 +27,11 @@ const customerMenuItems: MenuItem[] = [
     icon: ShoppingBag,
   },
   {
+    label: 'Trials',
+    href: '/customer/trials',
+    icon: Package,
+  },
+  {
     label: 'Orders',
     href: '/customer/orders',
     icon: Package,

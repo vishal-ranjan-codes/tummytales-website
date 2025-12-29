@@ -61,7 +61,7 @@ const roleDashboards: Record<UserRole, string> = {
 type MenuItem = { label: string; icon: React.ElementType; href: string }
 
 export default function AccountMenu({ variant = 'desktop', initialProfile, initialUser }: AccountMenuProps) {
-  const { user: ctxUser, profile: ctxProfile, currentRole: ctxRole, roles, signOut, isReady } = useAuth()
+  const { user: ctxUser, profile: ctxProfile, currentRole: ctxRole, roles, signOut, isReady, isSigningOut } = useAuth()
   // Use client user if available, otherwise use initial user
   const user = ctxUser ?? (initialUser ? { id: initialUser.id, email: initialUser.email, user_metadata: (initialUser as { user_metadata?: Record<string, unknown> })?.user_metadata } as { id: string | null; email: string | null; user_metadata?: Record<string, unknown> } | null : null)
   const currentRole = (ctxRole ?? initialProfile?.currentRole ?? null) as UserRole | null
@@ -108,13 +108,16 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
   }
 
   const handleSignOut = async () => {
+    if (isSigningOut) return // Prevent multiple clicks
+    
     try {
       await signOut()
       toast.success('Signed out successfully!')
       router.push('/')
-    } catch (error) {
-      console.error('Sign out error:', error)
-      toast.error('Failed to sign out. Please try again.')
+    } catch {
+      // Error is already handled in AuthContext, but we still redirect
+      // Local state is cleared even on error, so user is effectively signed out
+      router.push('/')
     }
   }
 
@@ -290,10 +293,11 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
                 <Button
                   variant="outline"
                   onClick={handleSignOut}
+                  disabled={isSigningOut}
                   className="w-full justify-start gap-3"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
                 </Button>
               </div>
             </div>
@@ -363,9 +367,13 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
         )}
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">
+        <DropdownMenuItem 
+          onClick={handleSignOut} 
+          disabled={isSigningOut}
+          className="text-red-600 focus:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <LogOut className="w-4 h-4 mr-2" />
-          <span>Sign Out</span>
+          <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

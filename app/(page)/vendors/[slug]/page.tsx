@@ -6,6 +6,7 @@ import VendorMenu from '@/app/components/vendor/VendorMenu'
 import VendorGallery from '@/app/components/vendor/VendorGallery'
 import VendorInfo from '@/app/components/vendor/VendorInfo'
 import SubscriptionButton from '@/app/components/vendor/SubscriptionButton'
+import TrialButton from '@/app/components/vendor/TrialButton'
 import type { Metadata } from 'next'
 import type { Meal } from '@/types/meal'
 
@@ -66,19 +67,37 @@ export default async function VendorDetailPage({ params }: PageProps) {
 
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)
 
-  try {
-    let vendorQuery = supabase
-      .from('vendors')
-      .select('id, display_name, bio, rating_avg, rating_count, veg_only, zone_id, kitchen_address_id, slug, fssai_no, zones(id, name)')
-      .eq('status', 'active')
+  // Fetch vendor first - this is the critical query
+  let vendorQuery = supabase
+    .from('vendors')
+    .select('id, display_name, bio, rating_avg, rating_count, veg_only, zone_id, kitchen_address_id, slug, fssai_no, zones(id, name)')
+    .eq('status', 'active')
 
-    vendorQuery = isUUID ? vendorQuery.eq('id', slug) : vendorQuery.eq('slug', slug)
+  vendorQuery = isUUID ? vendorQuery.eq('id', slug) : vendorQuery.eq('slug', slug)
 
-    const { data: vendor, error: vendorError } = await vendorQuery.single()
+  const { data: vendor, error: vendorError } = await vendorQuery.single()
 
-    if (vendorError || !vendor) {
+  // Handle vendor not found case - this is a legitimate 404
+  if (vendorError) {
+    // Check if it's a "not found" error (PGRST116 is Supabase's "not found" code)
+    if (vendorError.code === 'PGRST116' || vendorError.message?.includes('No rows')) {
       notFound()
     }
+    // For other errors, log and throw to let Next.js handle it
+    console.error('Vendor query error:', {
+      code: vendorError.code,
+      message: vendorError.message,
+      slug,
+      isUUID,
+    })
+    throw new Error(`Failed to fetch vendor: ${vendorError.message}`)
+  }
+
+  if (!vendor) {
+    notFound()
+  }
+
+  try {
 
     const [mediaResult, mealsResult, addressResult] = await Promise.all([
       supabase
@@ -99,6 +118,17 @@ export default async function VendorDetailPage({ params }: PageProps) {
             .single()
         : Promise.resolve({ data: null, error: null }),
     ])
+
+    // Handle errors in parallel queries gracefully
+    if (mediaResult.error) {
+      console.warn('Error fetching vendor media:', mediaResult.error)
+    }
+    if (mealsResult.error) {
+      console.warn('Error fetching meals:', mealsResult.error)
+    }
+    if (addressResult.error) {
+      console.warn('Error fetching address:', addressResult.error)
+    }
 
     const media = (mediaResult.data || []) as Array<{ id: string; media_type: string; url: string; display_order?: number | null }>
     const profileMedia = media.find(m => m.media_type === 'profile')
@@ -171,10 +201,32 @@ export default async function VendorDetailPage({ params }: PageProps) {
           </div>
 
           <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t theme-border-color shadow-lg p-4">
+            <div className="flex gap-2">
+              <TrialButton
+                vendorId={vendor.id}
+                vendorSlug={destinationSlug}
+                fullWidth
+                size="lg"
+              />
+              <SubscriptionButton
+                vendorName={vendor.display_name}
+                vendorSlug={destinationSlug}
+                fullWidth
+                size="lg"
+              />
+            </div>
+          </div>
+
+          {/* Desktop CTA */}
+          <div className="hidden lg:block fixed bottom-8 right-8 z-50 flex flex-col gap-2">
+            <TrialButton
+              vendorId={vendor.id}
+              vendorSlug={destinationSlug}
+              size="lg"
+            />
             <SubscriptionButton
               vendorName={vendor.display_name}
               vendorSlug={destinationSlug}
-              fullWidth
               size="lg"
             />
           </div>
@@ -182,8 +234,16 @@ export default async function VendorDetailPage({ params }: PageProps) {
       </>
     )
   } catch (error) {
-    console.error('Error loading vendor page:', error)
-    notFound()
+    // Log the error for debugging
+    console.error('Error loading vendor page data:', {
+      slug,
+      vendorId: vendor?.id,
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
+    
+    // Re-throw the error to let Next.js error boundary handle it
+    // Don't call notFound() here as the vendor was found, but other data failed to load
+    throw error
   }
 }
 

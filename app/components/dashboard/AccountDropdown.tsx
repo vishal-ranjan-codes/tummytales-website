@@ -24,16 +24,21 @@ import { UserRole } from '@/lib/auth/role-types'
 
 export default function AccountDropdown() {
   const router = useRouter()
-  const { user, profile, signOut, isReady, currentRole } = useAuth()
+  const { user, profile, signOut, isReady, currentRole, isSigningOut } = useAuth()
 
   const handleLogout = async () => {
+    if (isSigningOut) return // Prevent multiple clicks
+    
     try {
       await signOut()
       toast.success('Logged out successfully')
       router.push('/')
       router.refresh()
     } catch {
-      toast.error('Failed to logout')
+      // Error is already handled in AuthContext, but we still redirect
+      // Local state is cleared even on error, so user is effectively signed out
+      router.push('/')
+      router.refresh()
     }
   }
 
@@ -210,9 +215,13 @@ export default function AccountDropdown() {
           )
         })()}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400">
+        <DropdownMenuItem 
+          onClick={handleLogout} 
+          disabled={isSigningOut}
+          className="text-red-600 dark:text-red-400"
+        >
           <LogOut className="w-4 h-4 mr-2" />
-          <span>Sign Out</span>
+          <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

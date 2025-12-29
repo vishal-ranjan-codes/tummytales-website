@@ -1,33 +1,26 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import TrialTypesClient from './TrialTypesClient'
+/**
+ * Admin Trial Types Page (Server Component)
+ * Trial type management for administrators
+ */
 
-export default async function TrialTypesPage() {
-  const supabase = await createClient()
+import { requireRole } from '@/lib/auth/server'
+import { getTrialTypes } from '@/lib/admin/trial-type-actions'
+import AdminTrialTypesClient from './AdminTrialTypesClient'
 
-  // Get current user
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    redirect('/auth/login')
+export default async function AdminTrialTypesPage() {
+  // Require admin role
+  await requireRole('admin')
+
+  // Fetch trial types data
+  const trialTypesResult = await getTrialTypes(false) // Get all trial types
+
+  if (!trialTypesResult.success || !trialTypesResult.data) {
+    // If error, pass empty array to client
+    return <AdminTrialTypesClient initialTrialTypes={[]} />
   }
 
-  // Verify admin role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('roles')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !profile.roles?.includes('admin')) {
-    redirect('/dashboard')
-  }
-
-  // Get trial types
-  const { data: trialTypes } = await supabase
-    .from('trial_types')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  return <TrialTypesClient initialTrialTypes={trialTypes || []} />
+  // Pass data to client component
+  return <AdminTrialTypesClient initialTrialTypes={trialTypesResult.data} />
 }
+
 

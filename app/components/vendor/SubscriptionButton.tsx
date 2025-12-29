@@ -2,8 +2,7 @@
 
 /**
  * Subscription Button Component
- * Demo subscribe button for vendor detail page
- * Will be connected to subscription flow in future phase
+ * Subscribe button for vendor detail page with v2 support
  */
 
 import { useRouter } from 'next/navigation'

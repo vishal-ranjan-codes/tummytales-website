@@ -3,14 +3,18 @@
  * Manages wizard state persistence using sessionStorage
  */
 
-import type { Plan, MealPrefInput, MealSlot } from '@/types/subscription'
+import type { BBPlan, MealSlot, DeliverySlot } from '@/types/bb-subscription'
 
 export interface WizardState {
   selectedPlanId: string
-  mealPrefs: MealPrefInput[]
-  deliverySchedule: Record<MealSlot, number[]>
+  selectedSlots: MealSlot[]
+  slotWeekdays: Record<MealSlot, number[]>
+  preferredDeliveryTimes: Record<MealSlot, DeliverySlot>
+  startDate: string
+  selectedAddressId: string | null
   vendorId: string
   timestamp: number
+  currentStep: number
 }
 
 const STORAGE_KEY_PREFIX = 'subscription_wizard_'
@@ -28,21 +32,27 @@ function getStorageKey(vendorId: string): string {
  */
 export function saveWizardState(
   vendorId: string,
-  selectedPlanId: string,
-  mealPrefs: MealPrefInput[],
-  deliverySchedule: Record<MealSlot, number[]>
+  state: Partial<WizardState> & { vendorId: string }
 ): void {
   try {
-    const state: WizardState = {
-      selectedPlanId,
-      mealPrefs,
-      deliverySchedule,
-      vendorId,
-      timestamp: Date.now(),
+    const fullState: WizardState = {
+      selectedPlanId: state.selectedPlanId || '',
+      selectedSlots: state.selectedSlots || [],
+      slotWeekdays: state.slotWeekdays || { breakfast: [], lunch: [], dinner: [] },
+      preferredDeliveryTimes: state.preferredDeliveryTimes || {
+        breakfast: { start: '', end: '' },
+        lunch: { start: '', end: '' },
+        dinner: { start: '', end: '' },
+      },
+      startDate: state.startDate || '',
+      selectedAddressId: state.selectedAddressId || null,
+      vendorId: state.vendorId,
+      timestamp: state.timestamp || Date.now(),
+      currentStep: state.currentStep || 1,
     }
 
     const key = getStorageKey(vendorId)
-    sessionStorage.setItem(key, JSON.stringify(state))
+    sessionStorage.setItem(key, JSON.stringify(fullState))
   } catch (error) {
     console.error('Failed to save wizard state to sessionStorage:', error)
     // Silently fail - state persistence is not critical
@@ -55,7 +65,7 @@ export function saveWizardState(
  */
 export function loadWizardState(
   vendorId: string,
-  availablePlans: Plan[]
+  availablePlans: BBPlan[]
 ): WizardState | null {
   try {
     const key = getStorageKey(vendorId)

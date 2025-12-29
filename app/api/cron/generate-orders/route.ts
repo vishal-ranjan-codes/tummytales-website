@@ -1,11 +1,14 @@
 /**
- * Order Generation Cron Job Endpoint
- * Generates daily orders from active subscriptions
- * Called nightly (e.g., at 2 AM) to generate orders for next day
+ * Order Generation Cron Job Endpoint (V2)
+ * Generates orders for cycles with paid invoices that don't have orders yet
+ * Enhanced with job tracking and batching
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { generateOrdersForDate } from '@/lib/orders/order-generator'
+import { executeOrderGenerationJob } from '@/lib/jobs/order-generation-job'
+
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300 // 5 minutes
 
 export async function GET(request: NextRequest) {
   return handleRequest(request)
@@ -16,60 +19,51 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleRequest(request: NextRequest) {
+  // Verify cron secret for security
+  const authHeader = request.headers.get('authorization')
+  const expectedAuth = `Bearer ${process.env.CRON_SECRET}`
+
+  if (!process.env.CRON_SECRET) {
+    console.error('[Order Generation Cron] CRON_SECRET not configured')
+    return NextResponse.json(
+      { error: 'Cron secret not configured' },
+      { status: 500 }
+    )
+  }
+
+  if (authHeader !== expectedAuth) {
+    console.warn('[Order Generation Cron] Unauthorized access attempt')
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+
   try {
-    // Optional: Protect endpoint with secret (if using custom cron)
-    // const authHeader = request.headers.get('authorization')
-    // const expectedSecret = process.env.CRON_SECRET
-    // if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
+    console.log('[Order Generation Cron] Starting order generation job...')
     
-    // Get target date from query params (defaults to tomorrow)
-    const searchParams = request.nextUrl.searchParams
-    const dateParam = searchParams.get('date')
+    const result = await executeOrderGenerationJob()
     
-    let targetDate: Date
-    
-    if (dateParam) {
-      // Parse provided date (format: YYYY-MM-DD)
-      targetDate = new Date(dateParam)
-      if (isNaN(targetDate.getTime())) {
-        return NextResponse.json(
-          { error: 'Invalid date format. Use YYYY-MM-DD' },
-          { status: 400 }
-        )
-      }
-    } else {
-      // Default to tomorrow
-      targetDate = new Date()
-      targetDate.setDate(targetDate.getDate() + 1)
-    }
-    
-    // Reset time to midnight
-    targetDate.setHours(0, 0, 0, 0)
-    
-    console.log(`Generating orders for ${targetDate.toISOString().split('T')[0]}`)
-    
-    // Generate orders
-    const result = await generateOrdersForDate(targetDate)
-    
-    console.log(`Order generation complete:`, {
-      created: result.created,
-      skipped: result.skipped,
-      errors: result.errors,
-    })
-    
+    console.log('[Order Generation Cron] Order generation job completed:', result)
+
     return NextResponse.json({
       success: true,
-      date: targetDate.toISOString().split('T')[0],
-      result,
+      timestamp: new Date().toISOString(),
+      result: {
+        processed: result.processed,
+        ordersCreated: result.ordersCreated,
+        skipped: result.skipped,
+        errors: result.errors,
+        hasMore: result.hasMore,
+      },
     })
   } catch (error: unknown) {
-    console.error('Error in order generation cron:', error)
+    console.error('[Order Generation Cron] Fatal error:', error)
     return NextResponse.json(
       {
         success: false,
         error: (error as Error).message || 'Internal server error',
+        timestamp: new Date().toISOString(),
       },
       { status: 500 }
     )

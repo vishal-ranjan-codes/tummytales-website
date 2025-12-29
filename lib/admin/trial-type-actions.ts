@@ -1,12 +1,16 @@
 'use server'
 
 /**
- * Trial Type Actions
- * Server actions for admin trial type management
+ * Admin Trial Type Actions
+ * Server actions for managing bb_trial_types
  */
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import type {
+  BBTrialType,
+  CreateBBTrialTypeInput,
+} from '@/types/bb-subscription'
 
 export interface ActionResponse<T = unknown> {
   success: boolean
@@ -14,181 +18,305 @@ export interface ActionResponse<T = unknown> {
   data?: T
 }
 
-export interface TrialTypeInput {
-  name: string
-  description?: string
-  durationDays: number
-  maxMeals: number
-  allowedSlots: ('breakfast' | 'lunch' | 'dinner')[]
-  priceType: 'per_meal' | 'fixed'
-  perMealDiscountPercent?: number
-  fixedPrice?: number
-  cooldownDays: number
-  isActive?: boolean
+/**
+ * Verify admin access
+ */
+async function verifyAdmin(): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('roles')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !profile.roles?.includes('admin')) {
+    return { success: false, error: 'Admin access required' }
+  }
+
+  return { success: true }
 }
 
 /**
- * Create trial type
+ * Get all trial types
  */
-export async function createTrialType(
-  data: TrialTypeInput
-): Promise<ActionResponse<{ trialTypeId: string }>> {
+export async function getTrialTypes(
+  activeOnly: boolean = false
+): Promise<ActionResponse<BBTrialType[]>> {
   try {
-    const supabase = await createClient()
-    
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return { success: false, error: 'Not authenticated' }
+    const adminCheck = await verifyAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
     }
 
-    // Verify admin role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('roles')
-      .eq('id', user.id)
+    const supabase = await createClient()
+
+    let query = supabase
+      .from('bb_trial_types')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (activeOnly) {
+      query = query.eq('active', true)
+    }
+
+    const { data: trialTypes, error } = await query
+
+    if (error) {
+      console.error('Error fetching trial types:', error)
+      return { success: false, error: 'Failed to fetch trial types' }
+    }
+
+    return { success: true, data: trialTypes as BBTrialType[] }
+  } catch (error: unknown) {
+    console.error('Unexpected error fetching trial types:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+/**
+ * Get trial type by ID
+ */
+export async function getTrialTypeById(
+  trialTypeId: string
+): Promise<ActionResponse<BBTrialType>> {
+  try {
+    const adminCheck = await verifyAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
+    }
+
+    const supabase = await createClient()
+
+    const { data: trialType, error } = await supabase
+      .from('bb_trial_types')
+      .select('*')
+      .eq('id', trialTypeId)
       .single()
 
-    if (!profile || !profile.roles?.includes('admin')) {
-      return { success: false, error: 'Admin role required' }
+    if (error || !trialType) {
+      return { success: false, error: 'Trial type not found' }
+    }
+
+    return { success: true, data: trialType as BBTrialType }
+  } catch (error: unknown) {
+    console.error('Unexpected error fetching trial type:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+/**
+ * Create a new trial type
+ */
+export async function createTrialType(
+  data: CreateBBTrialTypeInput
+): Promise<ActionResponse<BBTrialType>> {
+  try {
+    const adminCheck = await verifyAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
+    }
+
+    const supabase = await createClient()
+
+    // Validate inputs
+    if (!data.name || data.name.trim().length === 0) {
+      return { success: false, error: 'Trial type name is required' }
+    }
+
+    if (data.duration_days <= 0) {
+      return { success: false, error: 'Duration days must be > 0' }
+    }
+
+    if (data.max_meals <= 0) {
+      return { success: false, error: 'Max meals must be > 0' }
+    }
+
+    if (!data.allowed_slots || data.allowed_slots.length === 0) {
+      return { success: false, error: 'At least one slot must be allowed' }
+    }
+
+    if (data.pricing_mode === 'per_meal' && data.discount_pct === null) {
+      return {
+        success: false,
+        error: 'Discount percentage is required for per_meal pricing',
+      }
+    }
+
+    if (data.pricing_mode === 'fixed' && data.fixed_price === null) {
+      return {
+        success: false,
+        error: 'Fixed price is required for fixed pricing',
+      }
     }
 
     // Create trial type
     const { data: trialType, error } = await supabase
-      .from('trial_types')
+      .from('bb_trial_types')
       .insert({
-        name: data.name,
-        description: data.description || null,
-        duration_days: data.durationDays,
-        max_meals: data.maxMeals,
-        allowed_slots: data.allowedSlots,
-        price_type: data.priceType,
-        per_meal_discount_percent: data.perMealDiscountPercent || null,
-        fixed_price: data.fixedPrice || null,
-        cooldown_days: data.cooldownDays,
-        is_active: data.isActive ?? true,
+        name: data.name.trim(),
+        duration_days: data.duration_days,
+        max_meals: data.max_meals,
+        allowed_slots: data.allowed_slots,
+        pricing_mode: data.pricing_mode,
+        discount_pct: data.discount_pct,
+        fixed_price: data.fixed_price,
+        cooldown_days: data.cooldown_days || 30,
+        active: data.active !== undefined ? data.active : true,
       })
       .select()
       .single()
 
-    if (error || !trialType) {
-      return { success: false, error: `Failed to create trial type: ${error?.message}` }
+    if (error) {
+      console.error('Error creating trial type:', error)
+      return {
+        success: false,
+        error: (error as Error).message || 'Failed to create trial type',
+      }
     }
 
-    revalidatePath('/dashboard/admin/trial-types')
-    return { success: true, data: { trialTypeId: trialType.id } }
+    revalidatePath('/admin/trial-types')
+    return { success: true, data: trialType as BBTrialType }
   } catch (error: unknown) {
-    console.error('Error creating trial type:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to create trial type' }
+    console.error('Unexpected error creating trial type:', error)
+    return {
+      success: false,
+      error: (error as Error).message || 'An unexpected error occurred',
+    }
   }
 }
 
 /**
- * Update trial type
+ * Update a trial type
  */
 export async function updateTrialType(
-  id: string,
-  data: Partial<TrialTypeInput>
-): Promise<ActionResponse> {
+  trialTypeId: string,
+  data: Partial<CreateBBTrialTypeInput>
+): Promise<ActionResponse<BBTrialType>> {
   try {
-    const supabase = await createClient()
-    
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return { success: false, error: 'Not authenticated' }
+    const adminCheck = await verifyAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
     }
 
-    // Verify admin role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('roles')
-      .eq('id', user.id)
+    const supabase = await createClient()
+
+    // Check if trial type exists
+    const { data: existingTrialType, error: checkError } = await supabase
+      .from('bb_trial_types')
+      .select('id, pricing_mode')
+      .eq('id', trialTypeId)
       .single()
 
-    if (!profile || !profile.roles?.includes('admin')) {
-      return { success: false, error: 'Admin role required' }
+    if (checkError || !existingTrialType) {
+      return { success: false, error: 'Trial type not found' }
     }
 
-    const updateData: Record<string, unknown> = {}
+    // Prepare update data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    }
 
-    if (data.name !== undefined) updateData.name = data.name
-    if (data.description !== undefined) updateData.description = data.description || null
-    if (data.durationDays !== undefined) updateData.duration_days = data.durationDays
-    if (data.maxMeals !== undefined) updateData.max_meals = data.maxMeals
-    if (data.allowedSlots !== undefined) updateData.allowed_slots = data.allowedSlots
-    if (data.priceType !== undefined) updateData.price_type = data.priceType
-    if (data.perMealDiscountPercent !== undefined) updateData.per_meal_discount_percent = data.perMealDiscountPercent || null
-    if (data.fixedPrice !== undefined) updateData.fixed_price = data.fixedPrice || null
-    if (data.cooldownDays !== undefined) updateData.cooldown_days = data.cooldownDays
-    if (data.isActive !== undefined) updateData.is_active = data.isActive
+    if (data.name !== undefined) updateData.name = data.name.trim()
+    if (data.duration_days !== undefined)
+      updateData.duration_days = data.duration_days
+    if (data.max_meals !== undefined) updateData.max_meals = data.max_meals
+    if (data.allowed_slots !== undefined)
+      updateData.allowed_slots = data.allowed_slots
+    if (data.pricing_mode !== undefined)
+      updateData.pricing_mode = data.pricing_mode
+    if (data.discount_pct !== undefined) updateData.discount_pct = data.discount_pct
+    if (data.fixed_price !== undefined) updateData.fixed_price = data.fixed_price
+    if (data.cooldown_days !== undefined)
+      updateData.cooldown_days = data.cooldown_days
+    if (data.active !== undefined) updateData.active = data.active
 
-    const { error } = await supabase
-      .from('trial_types')
+    // Update trial type
+    const { data: trialType, error } = await supabase
+      .from('bb_trial_types')
       .update(updateData)
-      .eq('id', id)
+      .eq('id', trialTypeId)
+      .select()
+      .single()
 
     if (error) {
-      return { success: false, error: `Failed to update trial type: ${error.message}` }
+      console.error('Error updating trial type:', error)
+      return {
+        success: false,
+        error: (error as Error).message || 'Failed to update trial type',
+      }
     }
 
-    revalidatePath('/dashboard/admin/trial-types')
-    return { success: true }
+    revalidatePath('/admin/trial-types')
+    return { success: true, data: trialType as BBTrialType }
   } catch (error: unknown) {
-    console.error('Error updating trial type:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to update trial type' }
+    console.error('Unexpected error updating trial type:', error)
+    return {
+      success: false,
+      error: (error as Error).message || 'An unexpected error occurred',
+    }
   }
 }
 
 /**
- * Delete trial type
+ * Delete a trial type (soft delete by setting active=false)
  */
-export async function deleteTrialType(id: string): Promise<ActionResponse> {
+export async function deleteTrialType(
+  trialTypeId: string
+): Promise<ActionResponse> {
   try {
-    const supabase = await createClient()
-    
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return { success: false, error: 'Not authenticated' }
+    const adminCheck = await verifyAdmin()
+    if (!adminCheck.success) {
+      return { success: false, error: adminCheck.error }
     }
 
-    // Verify admin role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('roles')
-      .eq('id', user.id)
+    const supabase = await createClient()
+
+    // Check if trial type exists
+    const { data: existingTrialType, error: checkError } = await supabase
+      .from('bb_trial_types')
+      .select('id')
+      .eq('id', trialTypeId)
       .single()
 
-    if (!profile || !profile.roles?.includes('admin')) {
-      return { success: false, error: 'Admin role required' }
+    if (checkError || !existingTrialType) {
+      return { success: false, error: 'Trial type not found' }
     }
 
-    // Check if trial type is in use
-    const { count } = await supabase
-      .from('trials')
-      .select('*', { count: 'exact', head: true })
-      .eq('trial_type_id', id)
-      .in('status', ['scheduled', 'active'])
-
-    if (count && count > 0) {
-      return { success: false, error: 'Cannot delete trial type that is in use' }
-    }
-
+    // Soft delete by setting active=false
     const { error } = await supabase
-      .from('trial_types')
-      .delete()
-      .eq('id', id)
+      .from('bb_trial_types')
+      .update({
+        active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', trialTypeId)
 
     if (error) {
-      return { success: false, error: `Failed to delete trial type: ${error.message}` }
+      console.error('Error deleting trial type:', error)
+      return {
+        success: false,
+        error: (error as Error).message || 'Failed to delete trial type',
+      }
     }
 
-    revalidatePath('/dashboard/admin/trial-types')
+    revalidatePath('/admin/trial-types')
     return { success: true }
   } catch (error: unknown) {
-    console.error('Error deleting trial type:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to delete trial type' }
+    console.error('Unexpected error deleting trial type:', error)
+    return {
+      success: false,
+      error: (error as Error).message || 'An unexpected error occurred',
+    }
   }
 }
+
 

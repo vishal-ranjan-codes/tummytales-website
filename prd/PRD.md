@@ -101,8 +101,8 @@ Differentiators vs Swiggy/Zomato:
 | **Multi-Role Accounts** | One user can hold multiple roles | All | Phase 0 |
 | **Vendor Onboarding** | KYC/FSSAI, capacity, menu setup | Vendor | Phase 1 |
 | **Public Vendor Discovery** | Browse active vendors by zone | Consumer | Phase 1 |
-| **Subscription & Customization** | 3-day trial → weekly/monthly plans → meal customization | Consumer | Phase 2 |
-| **Order Generation & Tracking** | Auto-create daily orders from subscriptions + live tracking | Consumer, Vendor, Rider | Phase 2 |
+| **Subscription & Customization** | Per-meal pricing, weekly/monthly cycles, slot+weekday selection, paid trials, skip credits | Consumer | Phase 2 |
+| **Order Generation & Tracking** | Cycle-based order generation (after invoice payment), skip management, vendor holidays | Consumer, Vendor, Rider | Phase 2 |
 | **Delivery Management** | Rider assignments, OTP delivery proof, status updates | Rider / Admin | Phase 3 |
 | **Payments & Payouts** | Razorpay integration + vendor/rider payouts | Admin | Phase 3 |
 | **Support & Feedback** | Complaints, auto-credits, ratings | Consumer / Admin | Phase 3 |
@@ -117,7 +117,7 @@ Differentiators vs Swiggy/Zomato:
 | --- | --- | --- |
 | **Phase 0** | **Foundation & Multi-Role Auth** | Phone-OTP auth, role management, dashboards for all roles |
 | **Phase 1** | **Vendor Onboarding & Public Discovery** | Vendor setup flows, admin approvals, public vendor pages |
-| **Phase 2** | **Consumer Subscriptions & Orders** | Full meal-plan system, customization, Razorpay payments |
+| **Phase 2** | **Consumer Subscriptions & Orders** | Per-meal pricing, weekly/monthly cycles, paid trials, skip credits, Razorpay payments |
 | **Phase 3** | **Delivery & Operations** | Rider routes, delivery tracking, payout workflows |
 | **Phase 4** | **Scale & Analytics** | Multi-city zones, corporate plans, analytics dashboards, mobile apps |
 
@@ -467,15 +467,52 @@ When `REQUIRE_PHONE_VERIFICATION=true` and user signs up via OAuth or Email:
 | **stops** (Phase 3) | Route stops | `id`, `route_id`, `seq`, `type` (`pickup`/`drop`), `vendor_id?`, `order_id?`, `eta`, `status`, `arrived_at?`, `completed_at?` | OTP/Proof linked at delivery. |
 | **delivery_proofs** (Phase 3) | OTP/geo proof | `id`, `stop_id`, `otp`, `photo_url?`, `lat`, `lng`, `ts` | Verified at drop. |
 
-### C4) Commerce (Phase 2+)
+### C4) Commerce (Phase 2+) - New Subscription, Order & Trial System
+
+**Note:** This section describes the revamped subscription, order, and trial system. All tables use the `bb_` prefix to distinguish from legacy Phase 2 tables.
+
+#### C4.1) Platform Settings & Pricing
 
 | Table | Purpose | Key Columns | Notes |
 | --- | --- | --- | --- |
-| **plans** | Plan templates | `id`, `name`, `period` (`weekly`, `biweekly`, `monthly`), `meals_per_day` (B/L/D flags), `base_price`, `currency`, `active` | SKU-like. |
-| **subscriptions** | Consumer↔Vendor contract | `id`, `consumer_id (profiles)`, `vendor_id`, `plan_id`, `billing_type` (`auto`, `prepaid`), `status` (`trial`, `active`, `paused`, `cancelled`), `starts_on`, `renews_on?`, `created_at` | “Contract” table. |
-| **subscription_prefs** | Customization | `id`, `subscription_id`, `slot`, `preferred_items text[]`, `days_of_week int[]`, `time_window` | Personalization per slot. |
-| **orders** | Daily meal instances | `id`, `subscription_id`, `date`, `slot`, `consumer_id`, `vendor_id`, `status` (`scheduled`, `preparing`, `ready`, `picked`, `delivered`, `failed:NNA | address |
-| **payments** | Razorpay records | `id`, `subscription_id?`, `order_id?`, `provider` (`razorpay`), `amount`, `status`, `provider_ref`, `created_at` | Reconciliation. |
+| **bb_platform_settings** | Global platform configuration | `id`, `delivery_fee_per_meal`, `commission_pct`, `skip_cutoff_hours`, `credit_expiry_days`, `timezone`, `created_at`, `updated_at` | Single-row table. |
+| **bb_zone_pricing** | Zone-specific pricing overrides | `zone_id`, `delivery_fee_per_meal`, `commission_pct` | Future-ready for multi-city expansion. |
+| **bb_vendor_slot_pricing** | Vendor per-slot base prices | `vendor_id`, `slot` (`breakfast`, `lunch`, `dinner`), `base_price`, `active`, `updated_at` | Unique per vendor+slot. |
+| **bb_vendor_holidays** | Vendor holiday calendar | `id`, `vendor_id`, `date`, `slot` (nullable for whole day), `reason`, `created_at` | Excludes dates from order generation. |
+
+#### C4.2) Plans & Subscriptions
+
+| Table | Purpose | Key Columns | Notes |
+| --- | --- | --- | --- |
+| **bb_plans** | Plan templates (admin-defined) | `id`, `name`, `period_type` (`weekly`, `monthly`), `allowed_slots` (meal_slot[]), `skip_limits` (jsonb per slot), `active`, `description`, `created_at`, `updated_at` | Weekly renewals on Mondays; monthly on 1st. |
+| **bb_subscription_groups** | Customer UX grouping | `id`, `consumer_id`, `vendor_id`, `plan_id`, `status` (`active`, `paused`, `cancelled`), `start_date`, `renewal_date`, `created_at`, `updated_at` | One active group per consumer+vendor. |
+| **bb_subscriptions** | Per-slot subscriptions | `id`, `group_id`, `consumer_id`, `vendor_id`, `plan_id`, `slot`, `weekdays` (int[]), `status`, `credited_skips_used_in_cycle`, `created_at`, `updated_at` | One active subscription per consumer+vendor+slot. |
+| **bb_cycles** | Billing cycles | `id`, `group_id`, `period_type`, `cycle_start`, `cycle_end`, `renewal_date`, `is_first_cycle`, `created_at` | Unique per group+cycle_start. |
+
+#### C4.3) Invoicing & Credits
+
+| Table | Purpose | Key Columns | Notes |
+| --- | --- | --- | --- |
+| **bb_invoices** | Billing invoices | `id`, `group_id` (nullable), `consumer_id`, `vendor_id`, `cycle_id` (nullable), `trial_id` (nullable), `status` (`draft`, `pending_payment`, `paid`, `failed`, `void`), `subtotal_vendor_base`, `delivery_fee_total`, `commission_total`, `discount_total`, `total_amount`, `razorpay_order_id`, `paid_at`, `created_at`, `updated_at` | Exactly one of cycle_id or trial_id must be non-null. |
+| **bb_invoice_lines** | Per-slot invoice line items | `id`, `invoice_id`, `subscription_id` (nullable), `slot`, `scheduled_meals`, `credits_applied`, `billable_meals`, `vendor_base_price_per_meal` (snapshot), `delivery_fee_per_meal` (snapshot), `commission_pct` (snapshot), `unit_price_customer` (snapshot), `line_total` | Price snapshots for auditability. |
+| **bb_credits** | Skip credits | `id`, `subscription_id`, `consumer_id`, `vendor_id`, `slot`, `status` (`available`, `used`, `expired`, `void`), `reason`, `source_order_id`, `created_at`, `expires_at`, `used_at`, `used_invoice_id` | Applied oldest-first; expire after configurable days. |
+| **bb_skips** | Customer skip records | `id`, `subscription_id`, `consumer_id`, `vendor_id`, `slot`, `service_date`, `credited` (bool), `created_at` | Unique per subscription+service_date+slot. |
+
+#### C4.4) Orders & Trials
+
+| Table | Purpose | Key Columns | Notes |
+| --- | --- | --- | --- |
+| **bb_orders** | Meal delivery orders | `id`, `subscription_id` (nullable), `group_id` (nullable), `trial_id` (nullable), `consumer_id`, `vendor_id`, `service_date`, `slot`, `status` (`scheduled`, `delivered`, `skipped_by_customer`, `skipped_by_vendor`, `failed_ops`, `customer_no_show`, `cancelled`), `delivery_window_start`, `delivery_window_end`, `delivery_address_id`, `special_instructions`, `created_at`, `updated_at` | Unique per subscription+service_date+slot or trial+service_date+slot. |
+| **bb_trial_types** | Trial product definitions | `id`, `name`, `duration_days`, `max_meals`, `allowed_slots` (meal_slot[]), `pricing_mode` (`per_meal`, `fixed`), `discount_pct` (nullable), `fixed_price` (nullable), `cooldown_days`, `active`, `created_at`, `updated_at` | Admin-defined trial products. |
+| **bb_vendor_trial_types** | Vendor trial opt-in | `vendor_id`, `trial_type_id`, `active` | Vendors can opt into specific trial types. |
+| **bb_trials** | Customer trial instances | `id`, `consumer_id`, `vendor_id`, `trial_type_id`, `start_date`, `end_date`, `status` (`scheduled`, `active`, `completed`, `cancelled`), `created_at`, `updated_at` | One-time, paid, non-renewing. |
+| **bb_trial_meals** | Trial meal selections | `id`, `trial_id`, `service_date`, `slot`, `created_at` | Customer picks exact meals within trial window. |
+
+#### C4.5) Payments & Payouts (Phase 3+)
+
+| Table | Purpose | Key Columns | Notes |
+| --- | --- | --- | --- |
+| **payments** | Razorpay payment records | `id`, `invoice_id?`, `provider` (`razorpay`), `amount`, `status`, `provider_ref`, `razorpay_payment_id`, `razorpay_order_id`, `created_at` | Links to bb_invoices. |
 | **payouts_vendor** | Vendor settlements | `id`, `vendor_id`, `period_start`, `period_end`, `amount`, `status`, `created_at` | Weekly in Phase 3+. |
 | **payouts_rider** | Rider settlements | `id`, `rider_id`, `period_start`, `period_end`, `amount`, `status`, `created_at` | Weekly in Phase 3+. |
 
@@ -579,10 +616,14 @@ Server presign endpoint enforces allowed prefixes and user/vendor ownership wher
 
 ## G) Events & Background Jobs (when you reach those phases)
 
-- **Nightly Subscription Expansion** (Phase 2): expand active subscriptions → `orders` for the next day, honoring pause/skip and capacity.
+- **Weekly Renewal Job** (Phase 2): Runs every Monday; creates invoices for due subscription groups, applies credits, generates Razorpay orders; generates cycle orders after payment success.
+- **Monthly Renewal Job** (Phase 2): Runs on 1st of each month; same flow as weekly renewals.
+- **Payment Retry Job** (Phase 2): Retries failed renewal payments (+6h, +24h, +48h); pauses subscriptions if exhausted.
+- **Credit Expiry Job** (Phase 2): Marks credits expired after `credit_expiry_days`; runs daily.
+- **Trial Completion Job** (Phase 2): Marks trials `completed` after end_date; runs daily.
 - **Auto-cancellation**: cancel orders that miss vendor ready window (Phase 3).
 - **Payout cycles**: aggregate delivered orders → weekly vendor/rider payouts (Phase 3+).
-- **Notifications**: SMS/WhatsApp triggers for OTP, assignment, delivery statuses (configurable).
+- **Notifications**: SMS/WhatsApp triggers for OTP, assignment, delivery statuses, renewal reminders, payment failures (configurable).
 
 ---
 
@@ -726,10 +767,14 @@ Server presign endpoint enforces allowed prefixes and user/vendor ownership wher
 - **Browse:** `/vendors` list filtered by zone; tap to open `/vendor/[id]`.
 - **Vendor page:** hero (cover/profile, badges), story, gallery, **menu by slot**, ratings preview, **CTAs**: Start Trial / Subscribe (enabled in later phase).
 
-**4) Subscription (later phase, define now)**
+**4) Subscription & Trial Flow (Phase 2)**
 
-- **Plan wizard:** select meals per day (B/L/D), select days/time windows, choose **Trial / Weekly / Monthly**, billing type (auto/prepaid).
-- **Confirmation:** show summary; payment (Razorpay later); **subscription record** created.
+- **Plan selection:** Choose plan type (weekly/monthly), select slots (breakfast/lunch/dinner), and set weekdays per slot.
+- **Start date:** Select start date (>= tomorrow); system calculates first cycle window and pricing preview.
+- **Pricing transparency:** Review first cycle (partial if needed) and next full cycle estimates with per-slot breakdown.
+- **Payment:** Razorpay checkout for first cycle; subscription activates on payment success.
+- **Renewals:** Weekly plans renew every Monday; monthly plans renew on 1st. Invoice created on renewal day; orders generated only after payment success.
+- **Trials:** Separate paid trial products (non-renewing); customer picks exact meals within trial window; cooldown period prevents repeat trials.
 
 **5) Managing meals (later)**
 
@@ -1126,32 +1171,77 @@ Two transport layers operate together:
 
 ## D) Payment & Payout Flows (Phase 2–3)
 
-### D1) Consumer Payments
+### D1) Pricing Model
 
-1. User selects plan → Razorpay checkout → payment success webhook.
-2. Create `payments` record (status=`success` or `failed`).
-3. Activate subscription (`status=active`).
-4. Auto-renew (if billing_type=`auto`) → repeat Razorpay charge.
+**Per-meal pricing formula:**
+- `commission_amount = vendor_base_price × commission_pct`
+- `customer_price_per_meal = vendor_base_price + delivery_fee + commission_amount`
 
-**Edge cases:** payment timeout, duplicate webhook, refund trigger on subscription cancel.
+**Pricing inputs:**
+- Vendor base price per meal per slot (set by vendor)
+- Platform delivery fee per meal (global setting; zone override future-ready)
+- Platform commission % on vendor base price (not on delivery fee)
 
-### D2) Vendor Payouts
+All billing calculations use per-meal prices with snapshotted prices on invoices for auditability.
 
-- Weekly cron aggregates **delivered orders × per-meal rate – platform commission**.
+### D2) Consumer Payments (Subscription & Trial)
+
+**Subscription Creation Flow:**
+1. Customer selects plan, slots, weekdays, and start date.
+2. System creates `bb_subscription_group`, `bb_subscriptions` (per slot), first `bb_cycle`, and `bb_invoice` with `pending_payment` status.
+3. Razorpay order created; `razorpay_order_id` stored on invoice.
+4. On payment webhook success: invoice marked `paid`, subscription activated, orders generated for first cycle.
+
+**Renewal Flow (Weekly/Monthly):**
+1. Renewal job runs on Mondays (weekly) or 1st (monthly).
+2. For each group due: create next `bb_cycle`, count scheduled meals per slot, exclude vendor holidays.
+3. Apply credits (oldest first) up to scheduled meals.
+4. Create `bb_invoice` + `bb_invoice_lines` with price snapshots.
+5. Create Razorpay order; notify customer to pay.
+6. On payment success: mark invoice `paid`, mark credits `used`, generate cycle orders, advance `renewal_date`.
+7. On payment failure: retry schedule (+6h, +24h, +48h); if exhausted, pause subscription.
+
+**Trial Flow:**
+1. Customer selects trial type, start date, and picks exact meals (date+slot) within window.
+2. Create `bb_trial`, `bb_trial_meals`, and `bb_invoice` (linked to trial).
+3. On payment success: create `bb_orders` linked to trial.
+4. Trial is one-time, paid, non-renewing; cooldown prevents repeat trials.
+
+**Edge cases:** payment timeout, duplicate webhook (idempotent via invoice status), refund trigger on subscription cancel.
+
+### D3) Skip & Credit System
+
+**Skip Rules:**
+- Allowed only before cutoff = (slot earliest delivery start) − platform `skip_cutoff_hours`.
+- If within plan limit for slot in current cycle: create credit, increment `credited_skips_used_in_cycle`, mark order `skipped_by_customer`.
+- If beyond limit: mark order `skipped_by_customer` (no credit).
+
+**Credit Application:**
+- Credits applied oldest-first during renewal invoice generation.
+- Credits expire after `credit_expiry_days` (configurable, default 90).
+- Credits reduce billable meals in future cycles; do not extend cycle or create extra meals.
+
+**Vendor Holiday Credits:**
+- When vendor marks holiday: affected orders marked `skipped_by_vendor`, credits created for impacted subscriptions.
+
+### D4) Vendor Payouts
+
+- Weekly cron aggregates **delivered orders × vendor base price – platform commission**.
 - Insert into `payouts_vendor`.
 - Admin approves → status=`released` → transfer via Razorpay X or bank upload.
 
-### D3) Rider Payouts
+### D5) Rider Payouts
 
 - Per-delivery fee + zone bonus.
 - Aggregate weekly → `payouts_rider`.
 - Generate summary statement PDF for Admin.
 
-### D4) Accounting / Reconciliation
+### D6) Accounting / Reconciliation
 
-- Every `payments` entry is matched with one or many orders.
-- Every payout has reference to the aggregated orders.
-- Maintain `transaction_id` mapping for audits.
+- Every `payments` entry links to `bb_invoices` (subscription or trial).
+- Every invoice has `bb_invoice_lines` with price snapshots for auditability.
+- Every payout references aggregated orders.
+- Maintain `razorpay_payment_id` and `razorpay_order_id` mapping for audits.
 - Admin can export CSV of period balances.
 
 ---

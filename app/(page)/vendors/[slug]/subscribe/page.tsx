@@ -1,33 +1,39 @@
 /**
  * Subscription Page
- * Multi-step subscription wizard for subscribing to a vendor
+ * Multi-step subscription wizard for bb_* subscriptions
+ * No authentication required - login happens inline in Step 4
  */
 
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import SubscriptionWizard from '@/app/components/customer/SubscriptionWizard'
-import type { Plan, VendorDeliverySlots } from '@/types/subscription'
+import SubscriptionBuilder from '@/app/components/customer/SubscriptionBuilder'
+import type { BBPlan, VendorDeliverySlots } from '@/types/bb-subscription'
 
 interface PageProps {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ step?: string }>
 }
 
-export default async function SubscribePage({ params }: PageProps) {
+export default async function SubscribePage({ params, searchParams }: PageProps) {
   const { slug } = await params
+  const { step } = await searchParams
 
   const supabase = await createClient()
-  
-  // Check if user is authenticated (optional)
-  const { data: { user } } = await supabase.auth.getUser()
-  const userId = user?.id
+
+  // Check if user is authenticated (optional - wizard works without auth)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   // Check if slug is UUID or actual slug
-  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    slug
+  )
 
-  // Get vendor by slug or ID (including delivery_slots)
+  // Get vendor with delivery_slots and slug
   let vendorQuery = supabase
     .from('vendors')
-    .select('id, display_name, slug, status, zone_id, delivery_slots, zones(id, name)')
+    .select('id, display_name, status, delivery_slots, slug')
     .eq('status', 'active')
 
   vendorQuery = isUUID ? vendorQuery.eq('id', slug) : vendorQuery.eq('slug', slug)
@@ -37,29 +43,19 @@ export default async function SubscribePage({ params }: PageProps) {
   if (vendorError || !vendor) {
     notFound()
   }
-  
-  // Parse delivery slots
-  let deliverySlots: VendorDeliverySlots | null = null
-  if (vendor.delivery_slots) {
-    try {
-      deliverySlots = vendor.delivery_slots as VendorDeliverySlots
-    } catch (error) {
-      console.error('Error parsing delivery_slots:', error)
-    }
-  }
 
-  // Get active plans
+  // Get active bb_plans
   const { data: plans, error: plansError } = await supabase
-    .from('plans')
+    .from('bb_plans')
     .select('*')
     .eq('active', true)
-    .order('base_price', { ascending: true })
+    .order('created_at', { ascending: false })
 
   if (plansError) {
-    console.error('Error fetching plans:', plansError)
+    console.error('Error fetching bb_plans:', plansError)
   }
 
-  // Get user addresses (only if authenticated)
+  // Get user addresses only if authenticated
   let addresses: Array<{
     id: string
     label: string
@@ -68,41 +64,46 @@ export default async function SubscribePage({ params }: PageProps) {
     city: string
     state: string
     pincode: string
-    lat: number | null
-    lng: number | null
     is_default: boolean
   }> = []
-  
-  if (userId) {
-    const { data: userAddresses, error: addressesError } = await supabase
-      .from('addresses')
-      .select('*')
-      .eq('user_id', userId)
-      .order('is_default', { ascending: false })
-      .order('created_at', { ascending: false })
 
-    if (addressesError) {
-      console.error('Error fetching addresses:', addressesError)
+  if (user) {
+    const { data: userAddresses, error: addressesError } = await supabase
+    .from('addresses')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('is_default', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (addressesError) {
+    console.error('Error fetching addresses:', addressesError)
     } else if (userAddresses) {
-      addresses = userAddresses as typeof addresses
+      addresses = userAddresses.map((a) => ({
+        id: a.id,
+        label: a.label,
+        line1: a.line1,
+        line2: a.line2,
+        city: a.city,
+        state: a.state,
+        pincode: a.pincode,
+        is_default: a.is_default,
+      }))
     }
   }
-
-  const zone = Array.isArray(vendor.zones) ? vendor.zones[0] : vendor.zones
 
   return (
     <div className="min-h-screen theme-bg-color pb-20 lg:pb-8">
       <div className="container mx-auto px-4 py-8">
-        <SubscriptionWizard
+        <SubscriptionBuilder
           vendor={{
             id: vendor.id,
             display_name: vendor.display_name,
-            slug: vendor.slug || vendor.id,
-            zone: zone,
           }}
-          plans={(plans || []) as Plan[]}
-          deliverySlots={deliverySlots}
+          vendorSlug={vendor.slug || slug}
+          plans={(plans || []) as BBPlan[]}
+          deliverySlots={(vendor.delivery_slots as VendorDeliverySlots) || {}}
           addresses={addresses}
+          initialStep={step ? parseInt(step, 10) : undefined}
         />
       </div>
     </div>

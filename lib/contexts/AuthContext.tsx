@@ -19,6 +19,7 @@ interface AuthContextType {
   currentRole: UserRole | null
   loading: boolean
   isReady: boolean // True when auth is initialized AND (user+profile ready OR no user)
+  isSigningOut: boolean // True when sign out is in progress
   signInWithOAuth: (provider: OAuthProvider) => Promise<void>
   signInWithOtp: (phone: string) => Promise<void>
   signOut: () => Promise<void>
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [isInitialized, setIsInitialized] = useState(false)
   const [profileFetchAttempted, setProfileFetchAttempted] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   // Memoize supabase client to prevent recreation on every render
   const supabase = useMemo(() => createClient(), [])
 
@@ -114,18 +116,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   const signOut = useCallback(async () => {
+    // Prevent multiple simultaneous sign out calls
+    if (isSigningOut) {
+      console.log('Sign out already in progress, ignoring duplicate call')
+      return
+    }
+
+    setIsSigningOut(true)
+    
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
+      // Check if there's a session before attempting to sign out
+      const { data: { session } } = await supabase.auth.getSession()
       
-      // Clear local state immediately for instant UI update
+      if (session) {
+        // Only call signOut if there's an active session
+        const { error } = await supabase.auth.signOut()
+        if (error) {
+          // If signOut fails but it's a "no session" error, that's okay
+          // We'll still clear local state for better UX
+          if (error.message?.includes('session') || error.message?.includes('Auth session missing')) {
+            console.log('Session already cleared, clearing local state')
+          } else {
+            throw error
+          }
+        }
+      }
+      
+      // Always clear local state for instant UI update, even if signOut failed
+      // This ensures the UI updates immediately regardless of server response
       setUser(null)
       setProfile(null)
+      setProfileFetchAttempted(false)
     } catch (error) {
       console.error('Sign out error:', error)
+      // Even on error, clear local state to ensure UI updates
+      // This prevents the user from being stuck in a signed-in state
+      setUser(null)
+      setProfile(null)
+      setProfileFetchAttempted(false)
       throw error
+    } finally {
+      setIsSigningOut(false)
     }
-  }, [supabase])
+  }, [supabase, isSigningOut])
 
   const switchRole = useCallback(async (role: UserRole) => {
     if (!user || !profile) return
@@ -246,6 +279,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     currentRole,
     loading,
     isReady,
+    isSigningOut,
     signInWithOAuth,
     signInWithOtp,
     signOut,
@@ -259,6 +293,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     currentRole,
     loading,
     isReady,
+    isSigningOut,
     signInWithOAuth,
     signInWithOtp,
     signOut,

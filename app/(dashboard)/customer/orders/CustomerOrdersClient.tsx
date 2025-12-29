@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Customer Orders Client Component
- * Displays order history with filters and actions
+ * Customer Orders Client Component (V2)
+ * Displays order history from bb_orders with filters and actions
  */
 
 import { useState, useMemo } from 'react'
@@ -16,23 +16,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { X, Package, AlertCircle } from 'lucide-react'
-import { toast } from 'sonner'
-import { skipOrder, swapOrderMeal, changeOrderAddress } from '@/lib/orders/customer-actions'
+import { Package, AlertCircle, Download } from 'lucide-react'
 import { formatDateShort } from '@/lib/utils/subscription'
-import type { Order } from '@/types/subscription'
+import { exportOrdersToCSV, downloadCSV } from '@/lib/utils/export-orders'
+import type { BBOrderWithDetails, BBOrderStatus } from '@/types/bb-subscription'
+import Link from 'next/link'
 
 interface CustomerOrdersClientProps {
-  initialOrders: Order[]
+  initialOrders: BBOrderWithDetails[]
 }
 
 export default function CustomerOrdersClient({
@@ -40,17 +32,13 @@ export default function CustomerOrdersClient({
 }: CustomerOrdersClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [orders, setOrders] = useState(initialOrders)
-  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all')
+  const [orders] = useState(initialOrders)
+  const [statusFilter, setStatusFilter] = useState<string>(
+    searchParams.get('status') || 'all'
+  )
   const [dateFrom, setDateFrom] = useState<string>(searchParams.get('date_from') || '')
   const [dateTo, setDateTo] = useState<string>(searchParams.get('date_to') || '')
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [skipDialogOpen, setSkipDialogOpen] = useState(false)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_swapDialogOpen, setSwapDialogOpen] = useState(false)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_addressDialogOpen, setAddressDialogOpen] = useState(false)
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [slotFilter, setSlotFilter] = useState<string>(searchParams.get('slot') || 'all')
 
   // Filter orders
   const filteredOrders = useMemo(() => {
@@ -61,106 +49,46 @@ export default function CustomerOrdersClient({
     }
 
     if (dateFrom) {
-      filtered = filtered.filter((order) => order.date >= dateFrom)
+      filtered = filtered.filter((order) => order.service_date >= dateFrom)
     }
 
     if (dateTo) {
-      filtered = filtered.filter((order) => order.date <= dateTo)
+      filtered = filtered.filter((order) => order.service_date <= dateTo)
     }
 
-    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [orders, statusFilter, dateFrom, dateTo])
+    if (slotFilter !== 'all') {
+      filtered = filtered.filter((order) => order.slot === slotFilter)
+    }
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive'> = {
+    return filtered.sort(
+      (a, b) => new Date(b.service_date).getTime() - new Date(a.service_date).getTime()
+    )
+  }, [orders, statusFilter, dateFrom, dateTo, slotFilter])
+
+  const getStatusBadge = (status: BBOrderStatus) => {
+    const variants: Record<BBOrderStatus, 'default' | 'secondary' | 'destructive'> = {
       scheduled: 'secondary',
-      preparing: 'secondary',
-      ready: 'default',
-      picked: 'default',
       delivered: 'default',
-      failed: 'destructive',
-      skipped: 'secondary',
+      skipped_by_customer: 'secondary',
+      skipped_by_vendor: 'secondary',
+      failed_ops: 'destructive',
+      customer_no_show: 'destructive',
       cancelled: 'destructive',
+    }
+    const labels: Record<BBOrderStatus, string> = {
+      scheduled: 'Scheduled',
+      delivered: 'Delivered',
+      skipped_by_customer: 'Skipped (You)',
+      skipped_by_vendor: 'Skipped (Vendor)',
+      failed_ops: 'Failed',
+      customer_no_show: 'No Show',
+      cancelled: 'Cancelled',
     }
     return (
       <Badge variant={variants[status] || 'secondary'}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {labels[status] || status}
       </Badge>
     )
-  }
-
-  const handleSkip = async () => {
-    if (!selectedOrder) return
-
-    setActionLoading(selectedOrder.id)
-    try {
-      const result = await skipOrder(selectedOrder.id)
-      if (result.success) {
-        toast.success('Order skipped')
-        setSkipDialogOpen(false)
-        setSelectedOrder(null)
-        // Update local state
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === selectedOrder.id ? { ...o, status: 'skipped' } : o
-          )
-        )
-      } else {
-        toast.error(result.error || 'Failed to skip order')
-      }
-    } catch (error) {
-      console.error('Error skipping order:', error)
-      toast.error('An unexpected error occurred')
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _handleSwap = async (newMealId: string) => {
-    if (!selectedOrder) return
-
-    setActionLoading(selectedOrder.id)
-    try {
-      const result = await swapOrderMeal(selectedOrder.id, newMealId)
-      if (result.success) {
-        toast.success('Meal swapped successfully')
-        setSwapDialogOpen(false)
-        setSelectedOrder(null)
-        // Reload orders
-        router.refresh()
-      } else {
-        toast.error(result.error || 'Failed to swap meal')
-      }
-    } catch (error) {
-      console.error('Error swapping meal:', error)
-      toast.error('An unexpected error occurred')
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _handleChangeAddress = async (addressId: string) => {
-    if (!selectedOrder) return
-
-    setActionLoading(selectedOrder.id)
-    try {
-      const result = await changeOrderAddress(selectedOrder.id, addressId)
-      if (result.success) {
-        toast.success('Delivery address updated')
-        setAddressDialogOpen(false)
-        setSelectedOrder(null)
-        router.refresh()
-      } else {
-        toast.error(result.error || 'Failed to change address')
-      }
-    } catch (error) {
-      console.error('Error changing address:', error)
-      toast.error('An unexpected error occurred')
-    } finally {
-      setActionLoading(null)
-    }
   }
 
   const applyFilters = () => {
@@ -168,7 +96,25 @@ export default function CustomerOrdersClient({
     if (statusFilter !== 'all') params.set('status', statusFilter)
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
+    if (slotFilter !== 'all') params.set('slot', slotFilter)
     router.push(`/customer/orders?${params.toString()}`)
+  }
+
+  const handleExport = () => {
+    const exportableOrders = filteredOrders.map((order) => ({
+      id: order.id,
+      service_date: order.service_date,
+      slot: order.slot,
+      status: order.status,
+      vendor_name: order.vendor?.display_name || '',
+      meal_name: '', // Orders don't have meal names in current structure
+      delivery_address: order.delivery_address || '',
+      created_at: order.created_at,
+    }))
+
+    const csvContent = exportOrdersToCSV(exportableOrders)
+    const filename = `orders_${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csvContent, filename)
   }
 
   return (
@@ -179,12 +125,18 @@ export default function CustomerOrdersClient({
           <h1 className="theme-h4">My Orders</h1>
           <p className="theme-fc-light mt-1">View and manage your meal orders</p>
         </div>
+        {filteredOrders.length > 0 && (
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+        )}
       </div>
 
       <div className="page-content p-4 md:p-5 lg:p-6 space-y-8">
         {/* Filters */}
         <div className="box p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
@@ -192,11 +144,22 @@ export default function CustomerOrdersClient({
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="preparing">Preparing</SelectItem>
-                <SelectItem value="ready">Ready</SelectItem>
                 <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="skipped">Skipped</SelectItem>
+                <SelectItem value="skipped_by_customer">Skipped (You)</SelectItem>
+                <SelectItem value="skipped_by_vendor">Skipped (Vendor)</SelectItem>
+                <SelectItem value="failed_ops">Failed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={slotFilter} onValueChange={setSlotFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by slot" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Slots</SelectItem>
+                <SelectItem value="breakfast">Breakfast</SelectItem>
+                <SelectItem value="lunch">Lunch</SelectItem>
+                <SelectItem value="dinner">Dinner</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -226,63 +189,69 @@ export default function CustomerOrdersClient({
             filteredOrders.map((order) => (
               <div key={order.id} className="box p-6 space-y-4">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-3">
                       <h3 className="text-lg font-semibold theme-fc-heading capitalize">
-                        {order.slot} - {formatDateShort(order.date)}
+                        {order.slot} - {formatDateShort(order.service_date)}
                       </h3>
                       {getStatusBadge(order.status)}
+                      {order.trial && (
+                        <Badge variant="outline" className="text-xs">
+                          Trial
+                        </Badge>
+                      )}
+                      {order.subscription && (
+                        <Badge variant="outline" className="text-xs">
+                          Subscription
+                        </Badge>
+                      )}
                     </div>
+                    {order.vendor && (
+                      <div className="text-sm theme-fc-light">
+                        Vendor: {order.vendor.display_name}
+                      </div>
+                    )}
+                    {order.delivery_address && (
+                      <div className="text-sm theme-fc-light">
+                        Address: {order.delivery_address.line1}, {order.delivery_address.city},{' '}
+                        {order.delivery_address.pincode}
+                      </div>
+                    )}
                     {order.special_instructions && (
                       <div className="flex items-center gap-1 text-sm theme-fc-light">
                         <AlertCircle className="w-4 h-4" />
                         <span>{order.special_instructions}</span>
                       </div>
                     )}
-                  </div>
-                  {order.status === 'scheduled' && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedOrder(order)
-                          setSkipDialogOpen(true)
-                        }}
-                        disabled={actionLoading === order.id}
+                    {order.delivery_window_start && order.delivery_window_end && (
+                      <div className="text-sm theme-fc-light">
+                        Delivery window: {order.delivery_window_start} -{' '}
+                        {order.delivery_window_end}
+                      </div>
+                    )}
+                    {order.subscription && (
+                      <Link
+                        href={`/customer/subscriptions/${order.group_id || ''}`}
+                        className="text-sm text-primary hover:underline"
                       >
-                        <X className="w-4 h-4 mr-2" />
-                        Skip
-                      </Button>
-                    </div>
-                  )}
+                        View Subscription →
+                      </Link>
+                    )}
+                    {order.trial && (
+                      <Link
+                        href={`/customer/trials/${order.trial_id || ''}`}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        View Trial →
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
       </div>
-
-      {/* Skip Dialog */}
-      <Dialog open={skipDialogOpen} onOpenChange={setSkipDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Skip Order</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to skip this order? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSkipDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSkip} disabled={actionLoading !== null}>
-              {actionLoading ? 'Skipping...' : 'Skip Order'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
-

@@ -34,7 +34,7 @@ interface MobileAccountMenuProps {
 
 export default function MobileAccountMenu({ open, onOpenChange }: MobileAccountMenuProps) {
   const router = useRouter()
-  const { user, profile, signOut, isReady, roles, currentRole, switchRole } = useAuth()
+  const { user, profile, signOut, isReady, roles, currentRole, switchRole, isSigningOut } = useAuth()
   const [isSwitching, setIsSwitching] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
 
@@ -43,6 +43,8 @@ export default function MobileAccountMenu({ open, onOpenChange }: MobileAccountM
   }, [])
 
   const handleLogout = async () => {
+    if (isSigningOut) return // Prevent multiple clicks
+    
     try {
       await signOut()
       toast.success('Logged out successfully')
@@ -50,7 +52,11 @@ export default function MobileAccountMenu({ open, onOpenChange }: MobileAccountM
       router.push('/')
       router.refresh()
     } catch {
-      toast.error('Failed to logout')
+      // Error is already handled in AuthContext, but we still redirect
+      // Local state is cleared even on error, so user is effectively signed out
+      onOpenChange(false)
+      router.push('/')
+      router.refresh()
     }
   }
 
@@ -264,10 +270,11 @@ export default function MobileAccountMenu({ open, onOpenChange }: MobileAccountM
 
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 p-3 rounded-lg theme-bg-secondary hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+                disabled={isSigningOut}
+                className="w-full flex items-center gap-3 p-3 rounded-lg theme-bg-secondary hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="font-medium">Sign Out</span>
+                <span className="font-medium">{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
               </button>
             </div>
           </div>

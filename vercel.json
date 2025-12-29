@@ -1,32 +1,28 @@
 {
   "crons": [
     {
+      "path": "/api/cron/renew-subscriptions",
+      "schedule": "1 0 * * *"
+    },
+    {
+      "path": "/api/cron/payment-retry",
+      "schedule": "0 */6 * * *"
+    },
+    {
       "path": "/api/cron/generate-orders",
       "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/cron/weekly-renewals",
-      "schedule": "0 4 * * 1"
-    },
-    {
-      "path": "/api/cron/monthly-renewals",
-      "schedule": "0 4 1 * *"
-    },
-    {
       "path": "/api/cron/expire-credits",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/complete-trials",
       "schedule": "0 3 * * *"
     },
     {
-      "path": "/api/cron/payment-retries",
-      "schedule": "0 * * * *"
+      "path": "/api/cron/complete-trials",
+      "schedule": "0 4 * * *"
     },
     {
-      "path": "/api/cron/adjust-holidays",
-      "schedule": "0 23 * * *"
+      "path": "/api/cron/auto-cancel-paused",
+      "schedule": "0 5 * * *"
     }
   ]
 }

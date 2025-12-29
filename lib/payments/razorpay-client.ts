@@ -8,7 +8,7 @@ import crypto from 'crypto'
 import type {
   RazorpayOrderResponse,
   RazorpayPaymentResponse,
-} from '@/types/subscription'
+} from '@/types/bb-subscription'
 
 /**
  * Get Razorpay configuration from environment variables

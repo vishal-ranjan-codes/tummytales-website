@@ -114,7 +114,7 @@ export default function CustomerDashboardClient({
               {subscriptions.map((subscription) => (
                 <Link
                   key={subscription.id}
-                  href="/customer/subscriptions"
+                  href={`/customer/subscriptions/${subscription.id}`}
                   className="border rounded-lg p-4 hover:shadow-lg transition-shadow theme-border-color"
                 >
                   <div className="space-y-3">

@@ -8,7 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { Meal } from '@/types/meal'
-import type { VendorDeliverySlots } from '@/types/subscription'
+import type { VendorDeliverySlots } from '@/types/bb-subscription'
 
 // ============================================
 // TYPE DEFINITIONS
@@ -247,11 +247,11 @@ export async function getVendorDashboardData(userId: string): Promise<VendorDash
           .select('*', { count: 'exact', head: true })
           .eq('vendor_id', vendorData.id),
         supabase
-          .from('orders')
+          .from('bb_orders')
           .select('id, slot, status')
           .eq('vendor_id', vendorData.id)
-          .eq('date', today)
-          .in('status', ['scheduled', 'preparing', 'ready']),
+          .eq('service_date', today)
+          .in('status', ['scheduled', 'delivered']),
       ])
 
       if (!mealsResult.error) {
@@ -502,80 +502,80 @@ export async function getCustomerDashboardData(userId: string): Promise<Customer
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const today = now.toISOString().split('T')[0]
 
-    // Fetch active subscriptions count and orders this month in parallel
-    const [subscriptionsResult, activeSubscriptionsResult, ordersResult] = await Promise.all([
-      // Get active subscriptions with vendor and plan info (limit to 3 for dashboard)
+    // Fetch active subscription groups count and orders this month in parallel
+    const [groupsResult, activeGroupsResult, ordersResult] = await Promise.all([
+      // Get active subscription groups with vendor and plan info (limit to 3 for dashboard)
       supabase
-        .from('subscriptions')
+        .from('bb_subscription_groups')
         .select(`
           id,
           status,
-          renews_on,
-          vendors(id, display_name),
-          plans(id, name)
+          renewal_date,
+          vendor:vendors(id, display_name),
+          plan:bb_plans(id, name)
         `)
         .eq('consumer_id', userId)
-        .in('status', ['trial', 'active', 'paused'])
+        .in('status', ['active', 'paused'])
         .order('created_at', { ascending: false })
         .limit(3),
-      // Get total active subscriptions count
+      // Get total active subscription groups count
       supabase
-        .from('subscriptions')
+        .from('bb_subscription_groups')
         .select('*', { count: 'exact', head: true })
         .eq('consumer_id', userId)
-        .in('status', ['trial', 'active', 'paused']),
-      // Get orders this month count
+        .in('status', ['active', 'paused']),
+      // Get orders this month count from bb_orders
       supabase
-        .from('orders')
+        .from('bb_orders')
         .select('*', { count: 'exact', head: true })
         .eq('consumer_id', userId)
         .gte('created_at', monthStart),
     ])
 
-    const activeSubscriptionsCount = activeSubscriptionsResult.count || 0
+    const activeSubscriptionsCount = activeGroupsResult.count || 0
     const ordersThisMonth = ordersResult.count || 0
 
-    // Process subscription summaries
+    // Process subscription group summaries
     const subscriptions: CustomerDashboardData['subscriptions'] = []
 
-    if (subscriptionsResult.data && subscriptionsResult.data.length > 0) {
-      // Get next delivery dates for each subscription by checking upcoming orders
-      const subscriptionIds = subscriptionsResult.data.map((sub) => sub.id)
+    if (groupsResult.data && groupsResult.data.length > 0) {
+      // Get next delivery dates for each group by checking upcoming orders
+      const groupIds = groupsResult.data.map((group) => group.id)
       
       const { data: upcomingOrders } = await supabase
-        .from('orders')
-        .select('subscription_id, date')
-        .in('subscription_id', subscriptionIds)
-        .gte('date', today)
-        .in('status', ['scheduled', 'preparing'])
-        .order('date', { ascending: true })
+        .from('bb_orders')
+        .select('group_id, service_date')
+        .in('group_id', groupIds)
+        .gte('service_date', today)
+        .in('status', ['scheduled'])
+        .order('service_date', { ascending: true })
 
-      // Group orders by subscription to find next delivery
+      // Group orders by subscription group to find next delivery
       const nextDeliveries = new Map<string, string>()
       if (upcomingOrders) {
-        const processedSubs = new Set<string>()
+        const processedGroups = new Set<string>()
         for (const order of upcomingOrders) {
-          if (!processedSubs.has(order.subscription_id)) {
-            nextDeliveries.set(order.subscription_id, order.date)
-            processedSubs.add(order.subscription_id)
+          if (order.group_id && !processedGroups.has(order.group_id)) {
+            nextDeliveries.set(order.group_id, order.service_date)
+            processedGroups.add(order.group_id)
           }
         }
       }
 
       // Build subscription summaries
-      for (const sub of subscriptionsResult.data) {
-        const vendor = Array.isArray(sub.vendors) ? sub.vendors[0] : sub.vendors
-        const plan = Array.isArray(sub.plans) ? sub.plans[0] : sub.plans
+      for (const group of groupsResult.data) {
+        const vendor = Array.isArray(group.vendor) ? group.vendor[0] : group.vendor
+        const plan = Array.isArray(group.plan) ? group.plan[0] : group.plan
 
         subscriptions.push({
-          id: sub.id,
+          id: group.id,
           vendor: vendor
             ? { id: vendor.id, display_name: vendor.display_name }
             : { id: '', display_name: 'Unknown Vendor' },
           plan_name: plan?.name || 'Unknown Plan',
-          status: sub.status,
-          next_delivery: nextDeliveries.get(sub.id) || null,
-          renewal_date: sub.renews_on || null,
+          status: group.status,
+          next_delivery: nextDeliveries.get(group.id) || null,
+          renewal_date: group.renewal_date || null,
         })
       }
     }

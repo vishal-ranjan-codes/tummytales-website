@@ -166,9 +166,9 @@ export function InlineLogin({ onLoginSuccess, returnUrl }: InlineLoginProps) {
       
       // Check if onboarding is needed
       if (!profile?.onboarding_completed && profile?.roles?.includes('customer')) {
-        // Redirect to onboarding with return URL (include step=3 for subscription wizard)
+        // Redirect to onboarding with return URL (include step=4 for subscription wizard)
         const onboardingUrl = returnUrl 
-          ? `/onboarding/customer?return=${encodeURIComponent(`${returnUrl}?step=3`)}`
+          ? `/onboarding/customer?return=${encodeURIComponent(`${returnUrl}?step=4`)}`
           : '/onboarding/customer'
         router.push(onboardingUrl)
         return
@@ -225,7 +225,7 @@ export function InlineLogin({ onLoginSuccess, returnUrl }: InlineLoginProps) {
                 <GoogleButton 
                   text="Continue with Google" 
                   redirectTo={returnUrl 
-                    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?return=${encodeURIComponent(`${returnUrl}?step=3`)}`
+                    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?return=${encodeURIComponent(`${returnUrl}?step=4`)}`
                     : undefined
                   }
                 />

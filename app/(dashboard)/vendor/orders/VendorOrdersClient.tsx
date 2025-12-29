@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Vendor Orders Client Component
- * Displays vendor orders with filters and status updates
+ * Vendor Orders Client Component (V2)
+ * Displays vendor orders from bb_orders with filters and status updates
  */
 
 import { useState, useMemo } from 'react'
@@ -19,14 +19,14 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Package, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
+import { Package, CheckCircle2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { updateOrderStatus, bulkUpdateOrderStatus } from '@/lib/orders/vendor-actions'
+import { updateOrderStatus } from '@/lib/bb-orders/vendor-order-actions'
 import { formatDateShort } from '@/lib/utils/subscription'
-import type { Order, MealSlot, OrderStatus } from '@/types/subscription'
+import type { BBOrderWithDetails, BBOrderStatus, MealSlot } from '@/types/bb-subscription'
 
 interface VendorOrdersClientProps {
-  initialOrders: Order[]
+  initialOrders: BBOrderWithDetails[]
   selectedDate: string
 }
 
@@ -57,25 +57,33 @@ export default function VendorOrdersClient({
     }
   }, [orders, slotFilter, statusFilter])
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive'> = {
+  const getStatusBadge = (status: BBOrderStatus) => {
+    const variants: Record<BBOrderStatus, 'default' | 'secondary' | 'destructive'> = {
       scheduled: 'secondary',
-      preparing: 'secondary',
-      ready: 'default',
-      picked: 'default',
       delivered: 'default',
-      failed: 'destructive',
-      skipped: 'secondary',
+      skipped_by_customer: 'secondary',
+      skipped_by_vendor: 'secondary',
+      failed_ops: 'destructive',
+      customer_no_show: 'destructive',
       cancelled: 'destructive',
+    }
+    const labels: Record<BBOrderStatus, string> = {
+      scheduled: 'Scheduled',
+      delivered: 'Delivered',
+      skipped_by_customer: 'Skipped (Customer)',
+      skipped_by_vendor: 'Skipped (Vendor)',
+      failed_ops: 'Failed',
+      customer_no_show: 'No Show',
+      cancelled: 'Cancelled',
     }
     return (
       <Badge variant={variants[status] || 'secondary'}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {labels[status] || status}
       </Badge>
     )
   }
 
-  const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
+  const handleStatusUpdate = async (orderId: string, newStatus: BBOrderStatus) => {
     setActionLoading(orderId)
     try {
       const result = await updateOrderStatus(orderId, newStatus)
@@ -83,9 +91,7 @@ export default function VendorOrdersClient({
         toast.success(`Order marked as ${newStatus}`)
         // Update local state
         setOrders((prev) =>
-          prev.map((o) =>
-            o.id === orderId ? { ...o, status: newStatus } : o
-          )
+          prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
         )
       } else {
         toast.error(result.error || 'Failed to update order status')
@@ -98,7 +104,7 @@ export default function VendorOrdersClient({
     }
   }
 
-  const handleBulkStatusUpdate = async (newStatus: OrderStatus) => {
+  const handleBulkStatusUpdate = async (newStatus: BBOrderStatus) => {
     if (selectedOrders.size === 0) {
       toast.error('Please select orders to update')
       return
@@ -106,14 +112,20 @@ export default function VendorOrdersClient({
 
     setActionLoading('bulk')
     try {
-      const result = await bulkUpdateOrderStatus(Array.from(selectedOrders), newStatus)
-      if (result.success) {
-        toast.success(`${result.data || 0} orders updated`)
+      // Update orders one by one (bulk update can be added later if needed)
+      const updatePromises = Array.from(selectedOrders).map((orderId) =>
+        updateOrderStatus(orderId, newStatus)
+      )
+      const results = await Promise.all(updatePromises)
+      const successCount = results.filter((r) => r.success).length
+
+      if (successCount > 0) {
+        toast.success(`${successCount} orders updated`)
         setSelectedOrders(new Set())
         // Reload orders
         router.refresh()
       } else {
-        toast.error(result.error || 'Failed to update orders')
+        toast.error('Failed to update orders')
       }
     } catch (error) {
       console.error('Error bulk updating orders:', error)
@@ -193,28 +205,22 @@ export default function VendorOrdersClient({
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="preparing">Preparing</SelectItem>
-                <SelectItem value="ready">Ready</SelectItem>
-                <SelectItem value="picked">Picked</SelectItem>
                 <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="skipped_by_customer">Skipped (Customer)</SelectItem>
+                <SelectItem value="skipped_by_vendor">Skipped (Vendor)</SelectItem>
+                <SelectItem value="failed_ops">Failed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
             {selectedOrders.size > 0 && (
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => handleBulkStatusUpdate('preparing')}
+                  onClick={() => handleBulkStatusUpdate('delivered')}
                   disabled={actionLoading === 'bulk'}
                   size="sm"
                 >
-                  Mark Preparing ({selectedOrders.size})
-                </Button>
-                <Button
-                  onClick={() => handleBulkStatusUpdate('ready')}
-                  disabled={actionLoading === 'bulk'}
-                  size="sm"
-                >
-                  Mark Ready ({selectedOrders.size})
+                  Mark Delivered ({selectedOrders.size})
                 </Button>
               </div>
             )}
@@ -237,27 +243,15 @@ export default function VendorOrdersClient({
                   {slotOrders.length > 0 && (
                     <div className="flex gap-2">
                       <Button
-                        variant="outline"
                         size="sm"
                         onClick={() => {
                           const orderIds = slotOrders.map((o) => o.id)
                           setSelectedOrders(new Set(orderIds))
-                          handleBulkStatusUpdate('preparing')
+                          handleBulkStatusUpdate('delivered')
                         }}
                         disabled={actionLoading === 'bulk'}
                       >
-                        Mark All Preparing
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          const orderIds = slotOrders.map((o) => o.id)
-                          setSelectedOrders(new Set(orderIds))
-                          handleBulkStatusUpdate('ready')
-                        }}
-                        disabled={actionLoading === 'bulk'}
-                      >
-                        Mark All Ready
+                        Mark All Delivered
                       </Button>
                     </div>
                   )}
@@ -281,11 +275,36 @@ export default function VendorOrdersClient({
                               <span className="text-sm theme-fc-light">
                                 Order #{order.id.slice(0, 8)}
                               </span>
+                              {order.trial && (
+                                <Badge variant="outline" className="text-xs">
+                                  Trial
+                                </Badge>
+                              )}
+                              {order.subscription && (
+                                <Badge variant="outline" className="text-xs">
+                                  Subscription
+                                </Badge>
+                              )}
                             </div>
+                            {order.consumer && (
+                              <div className="text-sm theme-fc-light">
+                                Customer: {order.consumer.full_name || 'Unknown'}
+                              </div>
+                            )}
+                            {order.delivery_address && (
+                              <div className="text-sm theme-fc-light">
+                                Address: {order.delivery_address.line1}, {order.delivery_address.city}
+                              </div>
+                            )}
                             {order.special_instructions && (
                               <div className="flex items-center gap-1 text-sm theme-fc-light">
                                 <AlertCircle className="w-4 h-4" />
                                 <span>{order.special_instructions}</span>
+                              </div>
+                            )}
+                            {order.delivery_window_start && order.delivery_window_end && (
+                              <div className="text-sm theme-fc-light">
+                                Window: {order.delivery_window_start} - {order.delivery_window_end}
                               </div>
                             )}
                           </div>
@@ -293,28 +312,17 @@ export default function VendorOrdersClient({
                         <div className="flex items-center gap-2">
                           {order.status === 'scheduled' && (
                             <Button
-                              variant="outline"
                               size="sm"
-                              onClick={() => handleStatusUpdate(order.id, 'preparing')}
-                              disabled={actionLoading === order.id}
-                            >
-                              <Clock className="w-4 h-4 mr-2" />
-                              Start Preparing
-                            </Button>
-                          )}
-                          {order.status === 'preparing' && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleStatusUpdate(order.id, 'ready')}
+                              onClick={() => handleStatusUpdate(order.id, 'delivered')}
                               disabled={actionLoading === order.id}
                             >
                               <CheckCircle2 className="w-4 h-4 mr-2" />
-                              Mark Ready
+                              Mark Delivered
                             </Button>
                           )}
-                          {order.status === 'ready' && (
+                          {order.status === 'delivered' && (
                             <Badge variant="default" className="bg-green-500">
-                              Ready for Pickup
+                              Delivered
                             </Badge>
                           )}
                         </div>
@@ -337,4 +345,3 @@ export default function VendorOrdersClient({
     </div>
   )
 }
-

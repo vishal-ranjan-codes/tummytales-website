@@ -6,8 +6,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { verifyWebhookSignature } from '@/lib/payments/razorpay-client'
-import { activateSubscription } from '@/lib/subscriptions/subscription-actions'
-import type { RazorpayWebhookEvent } from '@/types/subscription'
+import { finalizeInvoicePaid } from '@/lib/bb-subscriptions/bb-subscription-actions'
+import { finalizeTrialInvoicePaid } from '@/lib/bb-trials/bb-trial-actions'
+import { storeMandateDetails, createRazorpayCustomer } from '@/lib/payments/razorpay-upi-autopay'
+import type { RazorpayWebhookEvent } from '@/types/bb-subscription'
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,8 +54,6 @@ export async function POST(request: NextRequest) {
       case 'payment.captured':
         // Payment is successfully captured
         await handlePaymentCaptured(event)
-        // Also check if it's an invoice payment
-        await handleInvoicePaymentCaptured(event)
         break
         
       case 'payment.failed':
@@ -95,60 +95,21 @@ async function handlePaymentAuthorized(event: RazorpayWebhookEvent) {
     return
   }
   
-  const subscriptionId = event.payload.payment?.entity?.notes?.subscription_id
+  // Check if this is a BB invoice payment (v2 system)
+  const invoiceId = event.payload.payment?.entity?.notes?.invoice_id
   
-  if (!subscriptionId) {
-    console.error('Subscription ID not found in payment notes')
+  if (!invoiceId) {
+    console.log('Invoice ID not found in payment notes - skipping')
     return
   }
   
-  // Create or update payment record
-  const supabase = await createClient()
-  
-  // Check if payment record exists
-  const { data: existingPayment } = await supabase
-    .from('payments')
-    .select('id, status')
-    .eq('provider_payment_id', payment.id)
-    .single()
-  
-  if (existingPayment) {
-    // Update existing payment
-    await supabase
-      .from('payments')
-      .update({
-        status: payment.captured ? 'success' : 'pending',
-        metadata: {
-          ...existingPayment,
-          authorized_at: new Date().toISOString(),
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', existingPayment.id)
-  } else {
-    // Create new payment record
-    await supabase
-      .from('payments')
-      .insert({
-        subscription_id: subscriptionId,
-        consumer_id: event.payload.payment?.entity?.notes?.consumer_id,
-        provider: 'razorpay',
-        provider_payment_id: payment.id,
-        provider_order_id: payment.order_id,
-        amount: payment.amount / 100, // Convert paise to rupees
-        currency: payment.currency,
-        status: payment.captured ? 'success' : 'pending',
-        metadata: {
-          authorized_at: new Date().toISOString(),
-          payment_method: payment.method,
-          payment_details: payment,
-        },
-      })
-  }
-  
-  // If payment is already captured, activate subscription
+  // If payment is already captured, finalize the invoice
   if (payment.captured) {
-    await activateSubscription(subscriptionId, payment.id)
+    try {
+      await finalizeInvoicePayment(invoiceId, payment.id, payment.order_id, payment)
+    } catch (error) {
+      console.error('Error processing BB invoice payment:', error)
+    }
   }
 }
 
@@ -163,59 +124,20 @@ async function handlePaymentCaptured(event: RazorpayWebhookEvent) {
     return
   }
   
-  const subscriptionId = event.payload.payment?.entity?.notes?.subscription_id
+  // Check if this is a BB invoice payment (v2 system)
+  const invoiceId = event.payload.payment?.entity?.notes?.invoice_id
   
-  if (!subscriptionId) {
-    console.error('Subscription ID not found in payment notes')
+  if (!invoiceId) {
+    console.log('Invoice ID not found in payment notes - skipping')
     return
   }
   
-  const supabase = await createClient()
-  
-  // Check if payment record exists
-  const { data: existingPayment } = await supabase
-    .from('payments')
-    .select('id, status')
-    .eq('provider_payment_id', payment.id)
-    .single()
-  
-  if (existingPayment) {
-    // Update payment status to success
-    await supabase
-      .from('payments')
-      .update({
-        status: 'success',
-        metadata: {
-          ...existingPayment,
-          captured_at: new Date().toISOString(),
-          payment_method: payment.method,
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', existingPayment.id)
-  } else {
-    // Create new payment record
-    await supabase
-      .from('payments')
-      .insert({
-        subscription_id: subscriptionId,
-        consumer_id: event.payload.payment?.entity?.notes?.consumer_id,
-        provider: 'razorpay',
-        provider_payment_id: payment.id,
-        provider_order_id: payment.order_id,
-        amount: payment.amount / 100, // Convert paise to rupees
-        currency: payment.currency,
-        status: 'success',
-        metadata: {
-          captured_at: new Date().toISOString(),
-          payment_method: payment.method,
-          payment_details: payment,
-        },
-      })
+  // Handle BB invoice payment (v2)
+  try {
+    await finalizeInvoicePayment(invoiceId, payment.id, payment.order_id, payment)
+  } catch (error) {
+    console.error('Error processing BB invoice payment:', error)
   }
-  
-  // Activate subscription
-  await activateSubscription(subscriptionId, payment.id)
 }
 
 /**
@@ -229,63 +151,231 @@ async function handlePaymentFailed(event: RazorpayWebhookEvent) {
     return
   }
   
-  const subscriptionId = event.payload.payment?.entity?.notes?.subscription_id
+  // Check if this is a BB invoice payment (v2 system)
+  const invoiceId = event.payload.payment?.entity?.notes?.invoice_id
   
-  if (!subscriptionId) {
-    console.error('Subscription ID not found in payment notes')
+  if (!invoiceId) {
+    console.log('Invoice ID not found in payment notes - skipping')
     return
   }
   
+  // Update invoice status to failed
   const supabase = await createClient()
-  
-  // Check if payment record exists
-  const { data: existingPayment } = await supabase
-    .from('payments')
-    .select('id')
-    .eq('provider_payment_id', payment.id)
-    .single()
-  
   const failureReason = payment.error_description || payment.error_reason || 'Payment failed'
   
-  if (existingPayment) {
-    // Update payment status to failed
-    await supabase
-      .from('payments')
-      .update({
-        status: 'failed',
-        failure_reason: failureReason,
-        metadata: {
-          failed_at: new Date().toISOString(),
-          error_code: payment.error_code,
-          error_description: payment.error_description,
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', existingPayment.id)
-  } else {
-    // Create new payment record with failed status
-    await supabase
-      .from('payments')
-      .insert({
-        subscription_id: subscriptionId,
-        consumer_id: event.payload.payment?.entity?.notes?.consumer_id,
-        provider: 'razorpay',
-        provider_payment_id: payment.id,
-        provider_order_id: payment.order_id,
-        amount: payment.amount / 100, // Convert paise to rupees
-        currency: payment.currency,
-        status: 'failed',
-        failure_reason: failureReason,
-        metadata: {
-          failed_at: new Date().toISOString(),
-          error_code: payment.error_code,
-          error_description: payment.error_description,
-          payment_details: payment,
-        },
-      })
+  await supabase
+    .from('bb_invoices')
+    .update({
+      status: 'failed',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', invoiceId)
+  
+  console.log(`BB invoice ${invoiceId} marked as failed: ${failureReason}`)
+}
+
+/**
+ * Helper function to finalize invoice payment (subscription or trial)
+ * Includes retry logic for transient failures
+ */
+async function finalizeInvoicePayment(
+  invoiceId: string,
+  razorpayPaymentId: string,
+  razorpayOrderId: string,
+  paymentEntity?: RazorpayWebhookEvent['payload']['payment']['entity']
+) {
+  const supabase = await createClient()
+  
+  // Check if this is a trial invoice or subscription invoice
+  const { data: invoice, error: invoiceError } = await supabase
+    .from('bb_invoices')
+    .select('trial_id, cycle_id, status')
+    .eq('id', invoiceId)
+    .single()
+  
+  if (invoiceError || !invoice) {
+    console.error('[Webhook] Error fetching invoice:', invoiceError)
+    throw new Error(`Invoice ${invoiceId} not found`)
   }
   
-  // Subscription remains in trial status (payment required to activate)
+  // Check if already processed (idempotency)
+  if (invoice.status === 'paid') {
+    console.log(`[Webhook] Invoice ${invoiceId} already processed, skipping`)
+    return
+  }
+  
+  // Determine invoice type and call appropriate function
+  let finalizeResult
+  
+  try {
+    if (invoice.trial_id) {
+      // Trial invoice
+      console.log(`[Webhook] Processing trial invoice ${invoiceId}`)
+      finalizeResult = await finalizeTrialInvoicePaid(
+        invoiceId,
+        razorpayPaymentId,
+        razorpayOrderId
+      )
+      
+      if (!finalizeResult.success) {
+        console.error('[Webhook] Error finalizing trial invoice:', finalizeResult.error)
+        throw new Error(finalizeResult.error || 'Failed to finalize trial invoice')
+      } else {
+        console.log(`[Webhook] ✓ Trial invoice ${invoiceId} finalized, ${finalizeResult.data?.created_orders || 0} orders created`)
+      }
+    } else if (invoice.cycle_id) {
+      // Subscription invoice
+      console.log(`[Webhook] Processing subscription invoice ${invoiceId}`)
+      finalizeResult = await finalizeInvoicePaid(
+        invoiceId,
+        razorpayPaymentId,
+        razorpayOrderId
+      )
+      
+      if (!finalizeResult.success) {
+        console.error('[Webhook] Error finalizing subscription invoice:', finalizeResult.error)
+        throw new Error(finalizeResult.error || 'Failed to finalize subscription invoice')
+      } else {
+        console.log(`[Webhook] ✓ Subscription invoice ${invoiceId} finalized, ${finalizeResult.data?.created_orders || 0} orders created`)
+        
+        // Check if UPI Autopay mandate needs to be created
+        await handleUPIAutopayMandateCreation(invoiceId, razorpayPaymentId, razorpayOrderId, paymentEntity)
+      }
+    } else {
+      console.error(`[Webhook] Invoice ${invoiceId} is neither a trial nor subscription invoice`)
+      throw new Error('Invalid invoice type')
+    }
+  } catch (error) {
+    // Log error for admin to manually retry
+    console.error(`[Webhook] CRITICAL: Failed to process invoice ${invoiceId}:`, error)
+    
+    // TODO: Send alert to admin (email, Slack, etc.)
+    // TODO: Create job for retry queue
+    
+    throw error
+  }
+}
+
+/**
+ * Handle UPI Autopay mandate creation after successful payment
+ */
+async function handleUPIAutopayMandateCreation(
+  invoiceId: string,
+  razorpayPaymentId: string,
+  razorpayOrderId: string,
+  paymentEntity?: RazorpayWebhookEvent['payload']['payment']['entity']
+) {
+  try {
+    const supabase = await createClient()
+    
+    // Get invoice with group details
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('bb_invoices')
+      .select(`
+        id,
+        group_id,
+        consumer_id,
+        group:bb_subscription_groups!bb_invoices_group_id_fkey(
+          id,
+          payment_method,
+          razorpay_customer_id,
+          razorpay_mandate_id
+        )
+      `)
+      .eq('id', invoiceId)
+      .single()
+    
+    if (invoiceError || !invoice || !invoice.group_id) {
+      return // Not a subscription invoice or group not found
+    }
+    
+    const group = invoice.group as unknown as {
+      id: string
+      payment_method: string | null
+      razorpay_customer_id: string | null
+      razorpay_mandate_id: string | null
+    }
+    
+    // Check if payment method is UPI Autopay
+    if (group.payment_method === 'upi_autopay') {
+      let mandateId: string | undefined
+      
+      // Try to extract mandate_id from payment entity if provided
+      if (paymentEntity) {
+        // Razorpay may return mandate_id in token or notes
+        const token = (paymentEntity as unknown as { token?: { mandate_id?: string } }).token
+        mandateId = token?.mandate_id
+      }
+      
+      // If not found in webhook payload, fetch from Razorpay API
+      if (!mandateId) {
+        try {
+          const { getPaymentDetails } = await import('@/lib/payments/razorpay-client')
+          const paymentDetails = await getPaymentDetails(razorpayPaymentId)
+          
+          // Extract mandate_id from payment response
+          const payment = paymentDetails as unknown as {
+            token?: { mandate_id?: string }
+            notes?: Record<string, string>
+            [key: string]: unknown
+          }
+          
+          mandateId = payment.token?.mandate_id || payment.notes?.mandate_id
+        } catch (error) {
+          console.warn(`[Webhook] Could not fetch payment details for ${razorpayPaymentId}:`, error)
+        }
+      }
+      
+      // Get user profile for customer creation
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone')
+        .eq('id', invoice.consumer_id)
+        .single()
+      
+      if (!profile) {
+        console.warn(`[Webhook] Profile not found for user ${invoice.consumer_id}, skipping mandate creation`)
+        return
+      }
+      
+      // Create or get Razorpay customer
+      const customerResult = await createRazorpayCustomer(
+        invoice.consumer_id,
+        profile.full_name || 'Customer',
+        profile.email || '',
+        profile.phone || ''
+      )
+      
+      if (!customerResult.success || !customerResult.customerId) {
+        console.error(`[Webhook] Failed to create Razorpay customer: ${customerResult.error}`)
+        return
+      }
+      
+      // Store mandate details if mandate_id was found
+      if (mandateId && !group.razorpay_mandate_id) {
+        await storeMandateDetails(
+          group.id,
+          customerResult.customerId,
+          mandateId,
+          undefined // Expiry date will be set by Razorpay
+        )
+        console.log(`[Webhook] Stored UPI Autopay mandate ${mandateId} for group ${group.id}`)
+      } else {
+        // Store customer ID even if mandate not found (will be created on next payment)
+        await supabase
+          .from('bb_subscription_groups')
+          .update({
+            razorpay_customer_id: customerResult.customerId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', group.id)
+        console.log(`[Webhook] Stored Razorpay customer ID for group ${group.id} (mandate will be created on next payment)`)
+      }
+    }
+  } catch (error) {
+    console.error('[Webhook] Error handling UPI Autopay mandate creation:', error)
+    // Don't throw - this is not critical for payment processing
+  }
 }
 
 /**
@@ -299,124 +389,25 @@ async function handlePaymentRefunded(event: RazorpayWebhookEvent) {
     return
   }
   
+  // Check if this is a BB invoice payment (v2 system)
+  const invoiceId = event.payload.payment?.entity?.notes?.invoice_id
+  
+  if (!invoiceId) {
+    console.log('Invoice ID not found in payment notes - skipping')
+    return
+  }
+  
+  // Update invoice status to void (refunded invoices are voided)
   const supabase = await createClient()
   
-  // Check if payment record exists
-  const { data: existingPayment } = await supabase
-    .from('payments')
-    .select('id, amount, refund_amount')
-    .eq('provider_payment_id', payment.id)
-    .single()
-  
-  if (!existingPayment) {
-    console.error('Payment record not found for refund')
-    return
-  }
-  
-  const refundAmount = payment.amount_refunded / 100 // Convert paise to rupees
-  const isFullRefund = refundAmount >= existingPayment.amount
-  const status = isFullRefund ? 'refunded' : 'partially_refunded'
-  
-  // Update payment record
   await supabase
-    .from('payments')
+    .from('bb_invoices')
     .update({
-      status,
-      refund_amount: refundAmount,
-      metadata: {
-        refunded_at: new Date().toISOString(),
-        refund_status: payment.refund_status,
-      },
+      status: 'void',
       updated_at: new Date().toISOString(),
     })
-    .eq('id', existingPayment.id)
+    .eq('id', invoiceId)
   
-  // Optionally cancel subscription if full refund
-  // This depends on business logic - for now, we just update payment status
-}
-
-/**
- * Handle invoice payment captured (new system)
- */
-async function handleInvoicePaymentCaptured(event: RazorpayWebhookEvent) {
-  const payment = event.payload.payment?.entity
-  const order = event.payload.order?.entity
-  
-  if (!payment || !order) {
-    return
-  }
-  
-  try {
-    const supabase = await createClient()
-    
-    // Check if this is an invoice payment (has invoice_id in notes)
-    const notes = payment.notes || order.notes || {}
-    const invoiceId = notes.invoice_id
-    
-    if (!invoiceId) {
-      // Not an invoice payment, skip
-      return
-    }
-    
-    // Update invoice status
-    const { error: invoiceError } = await supabase
-      .from('invoices')
-      .update({
-        status: 'paid',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', invoiceId)
-    
-    if (invoiceError) {
-      console.error('Error updating invoice status:', invoiceError)
-      return
-    }
-    
-    // Check if payment record already exists
-    const { data: existingPayment } = await supabase
-      .from('payments')
-      .select('id')
-      .eq('provider_payment_id', payment.id)
-      .single()
-    
-    if (!existingPayment) {
-      // Create payment record
-      await supabase
-        .from('payments')
-        .insert({
-          invoice_id: invoiceId,
-          consumer_id: notes.consumer_id,
-          provider: 'razorpay',
-          provider_payment_id: payment.id,
-          provider_order_id: order.id,
-          amount: payment.amount / 100, // Convert paise to rupees
-          currency: payment.currency,
-          status: 'success',
-          metadata: {
-            captured_at: new Date().toISOString(),
-            payment_method: payment.method,
-          },
-        })
-    } else {
-      // Update existing payment
-      await supabase
-        .from('payments')
-        .update({
-          status: 'success',
-          invoice_id: invoiceId,
-          metadata: {
-            captured_at: new Date().toISOString(),
-            payment_method: payment.method,
-          },
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existingPayment.id)
-    }
-    
-    console.log(`Invoice ${invoiceId} payment captured successfully`)
-  } catch (error) {
-    console.error('Error handling invoice payment captured:', error)
-    // Don't throw - webhook should still return 200
-  }
+  console.log(`BB invoice ${invoiceId} marked as void due to refund`)
 }
 

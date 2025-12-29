@@ -1,919 +1,808 @@
-New Subscription, Order and Trial System for BellyBox
+## New Subscription, Order and Trial System for BellyBox
+
+### Document control
+- **Product**: BellyBox
+- **Doc type**: PRD + technical implementation plan (Next.js 14 + Supabase)
+- **Owner**: Product + Engineering
+- **Status**: Draft (v1)
+- **Last updated**: 2025-12-12
 
 ---
 
-# 1. High level goals
+## 1) Context / Why change
 
-The new BellyBox system is built to:
+### 1.1 Current system (“as-is”) summary (from repo)
+BellyBox Phase 2 currently implements:
+- **Plans** (`plans`): `period` ∈ {weekly, biweekly, monthly}, `meals_per_day` (boolean breakfast/lunch/dinner), **flat** `base_price`, and `trial_days` (free-trial concept).
+- **Subscriptions** (`subscriptions`): **one row per customer+vendor** (partial unique index), with `status` ∈ {trial, active, paused, cancelled, expired}, `price` (flat), `starts_on`, `renews_on`, `expires_on`, `trial_end_date`.
+- **Preferences** (`subscription_prefs`): one row per subscription+slot, contains `days_of_week[]`, optional time window, meal preference.
+- **Orders** (`orders`): generated as **daily meal instances** with unique constraint `(subscription_id, date, slot)`. Customer can “skip” by setting `status='skipped'` before a hard-coded cutoff.
+- **Order generation**: a Next.js cron route (`/api/cron/generate-orders`) calls `lib/orders/order-generator.ts` to generate orders for **tomorrow** from all active/trial subscriptions.
+- **Payments** (`payments`): stores Razorpay payment records; webhook activates subscription.
 
-1. Charge customers fairly based on **actual meals** they schedule and receive.
-2. Give customers flexible control over their weekly routine, with **clear renewals** and **simple UX**.
-3. Protect vendor margins while giving them tools to manage capacity, pricing, and holidays.
-4. Support trials as a **short, low risk, paid sampling experience** separate from subscriptions.
-5. Keep renewals and accounting predictable through fixed weekly and monthly cycles.
-6. Keep the internal model clean and scalable, even if the UX feels simple.
-
-Everything flows from these principles.
-
----
-
-# 2. Pricing model
-
-Pricing is built from three layers:
-
-1. **Vendor base price per meal**
-
-   * Each vendor sets the base price per slot:
-
-     * Example: Breakfast, Lunch, Dinner each have their own base price.
-
-2. **Platform delivery fee per meal**
-
-   * Admin defines a delivery fee per meal, which can vary by city or zone later.
-
-3. **Platform commission**
-
-   * Admin defines a commission percentage on the vendor base price.
-
-The customer facing **price per meal** for a slot is:
-
-* Vendor base price
-* Plus delivery fee per meal
-* Plus commission (percentage of base price, not on delivery fee)
-
-Example:
-
-* Vendor sets:
-
-  * Breakfast base price = 80
-  * Lunch base price = 100
-  * Dinner base price = 100
-
-* Admin sets:
-
-  * Per meal delivery fee = 30
-  * Commission = 10 percent on vendor base
-
-Then:
-
-* Breakfast per meal price = 80 + 30 + 8 = 118
-* Lunch per meal price = 100 + 30 + 10 = 140
-* Dinner per meal price = 100 + 30 + 10 = 140
-
-For subscriptions and trials, all billing calculations use these per slot per meal prices.
-
-Later, different zones can have different delivery fee and commission rules.
+Key gaps vs the new plan:
+- Billing is **not per-meal**; no cycles/invoices/credits; renewal alignment is **not Monday/1st anchored**; “trial” is a **subscription free trial**, not a separate paid product.
 
 ---
 
-# 3. Core concepts
+## 2) Goals / Non-goals
 
-These are the key building blocks of the system.
+### 2.1 High-level goals (from the plan)
+1. Charge customers based on **actual scheduled meals**.
+2. Give flexible weekly routine control with predictable **weekly/monthly renewals**.
+3. Protect vendor margins while providing capacity/pricing/holiday controls.
+4. Support **paid trials** as a separate product (no auto-renew).
+5. Predictable accounting: weekly cycles start Monday; monthly cycles start 1st.
+6. Clean internal model with scalable schema and idempotent jobs.
 
-### Vendor
-
-A home chef or tiffin provider who:
-
-* Sets base prices per slot.
-* Configures delivery windows per slot.
-* Sets maximum meals per day per slot.
-* Can mark holidays for particular dates and slots.
-* Participates in admin defined plans and trial types.
-
-### Slot
-
-A meal “type” such as:
-
-* Breakfast
-* Lunch
-* Dinner
-
-All subscriptions and orders are tracked per slot.
-
-### Plan
-
-An admin defined structure that describes recurring period and skip rules.
-
-Each plan has:
-
-* Period type:
-
-  * Weekly
-  * Monthly
-
-* Fixed renewal rule:
-
-  * Weekly plans always renew on Mondays.
-  * Monthly plans always renew on the 1st of the month.
-
-* Allowed slots:
-
-  * For example, “Lunch only” or “All three slots”.
-
-* Skip limits per period per slot:
-
-  * For example:
-
-    * Weekly plan:
-
-      * Breakfast: 1 credited skip per week
-      * Lunch: 2 credited skips per week
-      * Dinner: 1 credited skip per week
-    * Monthly plan:
-
-      * Breakfast: 3 credited skips per month
-      * Lunch: 4 credited skips per month
-      * Dinner: 3 credited skips per month
-
-These skip limits apply independently to each slot.
-
-### Subscription
-
-A subscription is a recurring commitment from a customer to a vendor, for a specific slot, on specific days of the week.
-
-Important internal rule:
-
-* Internally: one subscription per vendor, per customer, per slot.
-* Externally: the customer sees one unified vendor subscription, even though it may be several slot subscriptions grouped together.
-
-Each subscription carries:
-
-* Customer.
-* Vendor.
-* Plan.
-* Slot (breakfast or lunch or dinner).
-* Selected days of the week for that slot.
-* Start date.
-* Renewal date.
-* Status: active, paused, cancelled.
-* Skip limit per period for that slot.
-* Number of credited skips used in current cycle.
-
-### Cycle
-
-A billing and service period.
-
-* Weekly cycle: Monday to Sunday.
-* Monthly cycle: 1st to last day of the month.
-
-Special behavior for the first cycle:
-
-* First cycle can be partial if the customer starts mid week or mid month.
-* Billing for the first cycle is based only on meals scheduled between start date and the first renewal date.
-
-### Order
-
-A single scheduled meal delivery instance for:
-
-* A particular date.
-* A particular slot.
-* A particular subscription.
-
-An order has a status such as:
-
-* Scheduled.
-* Delivered.
-* Skipped by customer.
-* Skipped by vendor (holiday, sudden closure).
-* Failed due to operations.
-* Customer no show.
-
-### Skip
-
-A skip is when a customer cancels a specific upcoming meal for a subscription and slot.
-
-Rules:
-
-* Customer can skip only before a cutoff time.
-* Skips within plan limit generate credits.
-* Skips beyond the limit do not generate credits, but the meal is still not served.
-* Skips are per subscription, per slot, per date.
-
-### Credit
-
-A credit represents one “free meal” for a particular subscription and slot in future billing, used to reduce the amount the customer pays in the next cycles.
-
-Properties:
-
-* A credit is created only when:
-
-  * Customer skips within their allowed limit.
-  * Vendor holiday cancels a scheduled meal.
-  * Operational failure occurs that is not the customer’s fault.
-
-* Credits:
-
-  * Are attached to a subscription and a slot.
-  * Reduce the number of billable meals in a future cycle.
-  * Never extend the subscription cycle.
-  * Never create extra meals beyond what is scheduled.
-  * Expire after a fixed time, for example 90 days.
-
-### Trial type
-
-An admin defined configuration describing a trial.
-
-For example:
-
-* One day trial, up to three meals.
-* Three day trial, up to six meals.
-
-Each trial type has:
-
-* Duration in days.
-* Maximum number of meals allowed in that window.
-* Allowed slots (for example lunch only, or any slot).
-* Pricing rule:
-
-  * Per meal: might be at full price or with a discount percent.
-  * Fixed price: one flat amount for the full trial.
-* Cooldown period: number of days before the customer can use another trial with the same vendor.
-
-### Trial
-
-A trial is a one time, short term, paid test experience for a vendor.
-
-Characteristics:
-
-* Completely separate from subscriptions.
-* Does not auto renew.
-* No skip logic in version one (simple to start).
-* Customer selects exact meals, dates, and slots within the trial window.
-* The trial has its own price calculated based on the trial type and selections.
-* After the trial ends, the system encourages the customer to subscribe to that vendor.
+### 2.2 Non-goals (v1)
+- Mid-cycle schedule changes (apply from next cycle only).
+- Trial “skip logic” and trial credits (handle manually if needed).
+- Multi-city timezone support (assume **Asia/Kolkata** initially; add zone timezone later).
+- Real-time operational dispatch/routing.
 
 ---
 
-# 4. Subscription model in detail
-
-## 4.1 Fixed renewal days
-
-To keep things predictable:
-
-* All weekly subscriptions renew on Monday.
-* All monthly subscriptions renew on the 1st of the month.
-
-This means:
-
-* Cycles are aligned for all customers, which simplifies renewals, reporting, and operations.
-
-## 4.2 First cycle behavior
-
-A customer can start a subscription any day of the week or month, but:
-
-* Their first cycle is from the chosen start date up to the next renewal day.
-
-Examples:
-
-* Weekly plan:
-
-  * Start date: Wednesday
-  * First cycle: Wednesday to Sunday
-  * Renewal: next Monday
-
-* Monthly plan:
-
-  * Start date: 10th
-  * First cycle: 10th to the end of the month
-  * Renewal: 1st of next month
-
-For each slot the customer selects, the system:
-
-* Counts how many days between start date and renewal date match their weekly choices (for example Monday to Friday).
-* Excludes vendor holidays.
-* Bills only for those scheduled days in the first cycle.
-
-This is the **prorated first cycle**.
-
-## 4.3 Subscription creation flow
-
-Customer chooses to subscribe to a vendor.
-
-Steps:
-
-1. Customer selects:
-
-   * One or more slots (breakfast, lunch, dinner).
-   * For each slot, the weekdays on which they want meals (for example Monday to Friday).
-   * A start date (for example a date after today).
-
-2. System validates:
-
-   * Vendor is active and offers those slots.
-   * Plan is valid.
-   * Start date is at least the next day.
-   * Start date results in at least one deliverable meal per slot before the first renewal date. If not, customer must choose a different start date or schedule.
-
-3. System calculates:
-
-   * Renewal date (next Monday or next 1st).
-   * For each slot:
-
-     * Number of scheduled meals in first cycle.
-     * Cost for that slot in first cycle using per meal price.
-   * Total cost for first cycle across slots.
-   * Also calculates what a full future cycle would cost.
-
-4. Customer sees:
-
-   * First cycle price (partial duration).
-   * Next full cycle price (for transparency).
-
-5. Customer confirms and pays.
-
-6. Subscriptions are created internally:
-
-   * One per slot.
-   * All linked to the same vendor and plan.
-
-The first cycle is now active.
-
-## 4.4 Start date change rules
-
-We want to allow customers to fix mistakes, but keep logic clean.
-
-Rules:
-
-* The customer can change their subscription start date only:
-
-  * During the first cycle.
-  * Before the first meal is delivered.
-  * If the new start date still has at least one scheduled meal before the renewal date.
-
-* The new start date must:
-
-  * Be at least the next day.
-  * Be earlier than the renewal date.
-
-Once the first meal is delivered:
-
-* Start date can no longer be changed.
-
-For simplicity in version one, a start date change:
-
-* Adjusts the internal start date and the range of first cycle orders.
-* Does not change the first cycle price, even if the number of meals slightly changes.
-
-  * This avoids complex refunds or adjustments in the first version.
-
-## 4.5 Renewals
-
-On every renewal day:
-
-* Weekly plan:
-
-  * Every Monday.
-* Monthly plan:
-
-  * Every 1st of the month.
-
-For each customer and vendor combination:
-
-1. The system finds all active slot subscriptions for that vendor and customer whose renewal date is today.
-
-2. It determines the new cycle window:
-
-   * Weekly: Monday to Sunday.
-   * Monthly: 1st to last day.
-
-3. For each slot subscription:
-
-   * It counts the number of scheduled meals in that cycle:
-
-     * Based on the selected weekdays.
-     * Ignoring vendor holidays.
-
-4. It applies any existing credits for those subscriptions and slots.
-
-   * Credits are used to reduce billable meals, but cannot exceed scheduled meals.
-   * Credits are consumed in order of oldest first.
-
-5. It calculates:
-
-   * Total scheduled meals.
-   * Total credits applied.
-   * Billable meals per slot.
-   * Amount to charge based on meal prices.
-
-6. It creates an invoice for that cycle.
-
-7. It attempts to charge the customer.
-
-8. If payment succeeds:
-
-   * The invoice is marked as paid.
-   * Credits are marked as used.
-   * Orders for that cycle are generated.
-   * Renewal date is moved to the next Monday or next 1st.
-
-9. If payment fails:
-
-   * The invoice is marked as failed.
-   * A payment retry process is started.
-   * If retries fail, the subscription is automatically paused.
-
-## 4.6 Pause and cancel
-
-Pause:
-
-* Pausing suspends future renewals, usually starting from the next cycle.
-* While paused, no new invoices are created and no new orders are generated.
-* The current cycle can either continue delivering or be stopped based on the chosen product policy. A simple rule is: pause effective from the next renewal.
-
-Cancel:
-
-* Cancelling means the subscription will not renew.
-* The current cycle can still continue until its end, or be stopped if you decide so.
-* No further invoices are created and the status is set to cancelled.
-
-## 4.7 Schedule changes
-
-Schedule changes allow the customer to revise which weekdays they receive meals for a slot.
-
-Options:
-
-* Simple version: schedule changes are applied from the next cycle only.
-
-  * When a customer changes their schedule, it does not touch existing orders in the current cycle.
-  * On the next renewal, the updated schedule takes effect.
-  * This option is simpler and safer for the first version.
-
-More advanced behavior (can be added later):
-
-* Apply changes starting from future days in the current cycle, as long as those days have not passed the skip cutoff. This requires more complex order adjustments.
-
-For now, the recommended rule for version one is:
-
-* “Schedule changes will apply starting from your next billing cycle.”
+## 3) Key product concepts (canonical definitions)
+
+### 3.1 Slot
+Meal type: `breakfast | lunch | dinner` (reuse existing `meal_slot` enum).
+
+### 3.2 Plan (admin-defined)
+Defines recurrence and skip limits:
+- `period_type`: weekly | monthly
+- `renewal_rule`: weekly → Mondays; monthly → 1st
+- `allowed_slots`: subset of slots
+- `skip_limits`: per slot per period (credited skips)
+
+### 3.3 Subscription (internal per-slot)
+**Internal invariant**: one subscription per **customer + vendor + slot**.
+Customer UX groups them into a **subscription group** (vendor-level card).
+
+### 3.4 Cycle
+- Weekly cycle: Monday–Sunday
+- Monthly cycle: 1st–last day
+First cycle can be partial, billed only for scheduled meals between `start_date` and first renewal boundary.
+
+### 3.5 Order
+A scheduled meal delivery instance for a date+slot, linked to a subscription.
+
+### 3.6 Skip & Credit
+- Skip cancels a scheduled order before cutoff.
+- Credited skips (within plan limit) create a **credit** for that subscription+slot.
+- Credits reduce billable meals in future cycles; expire (e.g., 90 days).
+
+### 3.7 Trial type & Trial
+- Trial type is admin-defined configuration.
+- Trial is one-time, paid, non-renewing; customer picks exact meals within a window.
 
 ---
 
-# 5. Orders and daily operations
+## 4) Pricing model
 
-## 5.1 Order generation
+### 4.1 Inputs
+1. **Vendor base price per meal per slot**
+2. **Platform delivery fee per meal** (global in v1; zone override later)
+3. **Platform commission %** on vendor base price (not on delivery fee)
 
-Orders are created based on active subscriptions.
+### 4.2 Per-meal price formula
+For a given vendor+slot:
+- `commission_amount = vendor_base_price * commission_pct`
+- `customer_price_per_meal = vendor_base_price + delivery_fee + commission_amount`
 
-At each renewal, after payment success:
-
-* For each slot subscription, the system generates orders for each scheduled day in that cycle, except holidays.
-
-For each date in the cycle:
-
-* If the date’s weekday is in the subscription’s selected weekdays.
-* If the vendor is not on holiday for that slot or for the whole day.
-* If there is no skip already recorded for that date.
-* If vendor capacity is not exceeded for that day and slot.
-
-Then an order is created with:
-
-* Customer.
-* Vendor.
-* Subscription.
-* Slot.
-* Delivery date.
-* Delivery window (for example 7:00 to 7:30).
-
-If there is a holiday:
-
-* No order is created.
-* A credit is created for that meal.
-
-If capacity is exceeded:
-
-* Ideally this should have been prevented at subscription creation, but if it happens, the system can generate a credit and notify admin and vendor.
-
-## 5.2 Order statuses
-
-Orders can move through these statuses:
-
-* Scheduled.
-* Delivered.
-* Skipped by customer.
-* Skipped by vendor.
-* Failed due to operations.
-* Customer no show.
-
-Each status change can trigger:
-
-* Operational updates.
-* Credits in case of vendor holiday or operational failure.
-* Analytics for vendor performance.
+### 4.3 Required behavior
+- All billing calculations (subscriptions and trials) use per-meal prices.
+- Store **snapshotted prices** on invoices / invoice lines for auditability.
 
 ---
 
-# 6. Skips and credits in depth
+## 5) System architecture (Next.js 14 + Supabase)
 
-## 6.1 Skip rules
+### 5.1 Where logic lives
+- **Postgres (Supabase)**: canonical source of truth, RLS, constraints, idempotent renewal via SQL functions/RPC.
+- **Server actions / Route handlers** (Next.js 14): orchestrate customer flows, call RPCs, create Razorpay orders.
+- **Background jobs**: scheduled functions (preferred: Supabase Edge Function + Scheduled Triggers, or Vercel Cron calling authenticated routes).
 
-Skips allow customers to occasionally opt out of individual meals without breaking the subscription.
+### 5.2 Security model
+- Customers can only read/write their own subscriptions, skips, trials, invoices.
+- Vendors can read operational orders and capacity views for themselves.
+- Admin controls plans, trial types, platform settings.
+- Background jobs run with **service role** (bypass RLS) and must be idempotent.
 
-Rules:
+### 5.3 Payments & renewals (Razorpay) — decision and trade-offs
+The plan requires “attempt to charge the customer” on renewal days. Razorpay supports multiple approaches:
 
-* There is a global skip cutoff. For example, three hours before the earliest delivery time for that slot.
-* After the cutoff, skip is not allowed for that meal.
-* For each plan and slot, there is a skip limit per period.
+- **Option A (recommended for v1)**: “Invoice + pay” renewal
+  - On renewal day, create an invoice and a Razorpay order.
+  - Notify customer to pay (push/SMS/email).
+  - If not paid after retry/grace window → pause subscription.
+  - **Pros**: simplest, no mandate storage, fastest to ship.
+  - **Cons**: not a true auto-charge; higher churn risk.
 
-  * For example, one credited skip per week for breakfast, two for lunch, one for dinner.
+- **Option B (v1.5 / v2)**: Autopay via mandates / tokenized payment method
+  - Capture an e-mandate at subscription start, store `provider_customer_id + mandate_id`.
+  - On renewal day, charge automatically; retries are automatic.
+  - **Pros**: true auto-renew; best UX.
+  - **Cons**: more compliance/edge cases; higher integration effort.
 
-When a customer requests a skip for a given date and slot:
-
-1. The system checks that:
-
-   * The subscription is active.
-   * The meal is in the current or upcoming cycle.
-   * The current time is before the skip cutoff for that meal.
-
-2. It checks the number of credited skips already used in the current cycle for that subscription and slot.
-
-3. If the skip count is below the skip limit:
-
-   * It increments the skip count for the period.
-   * It creates a credit for that subscription and slot.
-   * It marks the corresponding order (if already created) as skipped by customer.
-
-4. If the skip count is at or above the limit:
-
-   * It still marks the meal as skipped.
-   * No credit is created.
-
-This keeps skip behavior predictable and balanced.
-
-## 6.2 Credit behavior
-
-Credits are always owned by a specific subscription and slot. They:
-
-* Are created on:
-
-  * Credited skips.
-  * Vendor declared holidays.
-  * Operational failures where the customer did nothing wrong.
-
-* Have a limited lifetime:
-
-  * For example, 90 days from creation.
-
-Credits:
-
-* Are applied automatically in future renewals for that subscription.
-* Reduce the number of billable meals in a cycle, up to the number of scheduled meals.
-* Do not extend the cycle dates.
-* Do not automatically create extra meals.
-
-When a subscription is paused:
-
-* Credits remain available until they expire.
-* If the subscription is resumed before credits expire, they can still be used.
+PRD scope: implement Option A with clean abstractions so Option B can be added without rewriting invoices/cycles/orders.
 
 ---
 
-# 7. Trial system in detail
+## 6) Data model (proposed)
 
-Trials are designed as a separate, focused experience that lets customers try a vendor without committing to a full subscription.
+### 6.1 Naming strategy
+To safely migrate from existing Phase-2 tables, create **v2 tables** prefixed with `bb_` (or `*_v2`) and migrate UI progressively.
 
-## 7.1 Trial types configuration
+Recommended prefix: `bb_`.
 
-Admin defines trial types such as:
+### 6.2 New enums
+- `bb_plan_period_type`: `weekly | monthly`
+- `bb_subscription_status`: `active | paused | cancelled` (no “trial” here; trials are separate)
+- `bb_invoice_status`: `draft | pending_payment | paid | failed | void`
+- `bb_order_status`: `scheduled | delivered | skipped_by_customer | skipped_by_vendor | failed_ops | customer_no_show | cancelled`
+- `bb_credit_status`: `available | used | expired | void`
+- `bb_trial_status`: `scheduled | active | completed | cancelled`
+- `bb_pricing_mode`: `per_meal | fixed`
 
-* One day trial, up to three meals.
-* Three day trial, up to six meals.
+### 6.3 Core tables
 
-Each trial type defines:
+#### 6.3.1 Platform settings
+`bb_platform_settings` (single-row table)
+- `id` (uuid)
+- `delivery_fee_per_meal` (numeric)
+- `commission_pct` (numeric, e.g. 0.10)
+- `skip_cutoff_hours` (int, e.g. 3)
+- `credit_expiry_days` (int, e.g. 90)
+- `timezone` (text, default 'Asia/Kolkata')
+- `created_at`, `updated_at`
 
-* Duration in days.
+#### 6.3.2 Zone overrides (future-ready)
+`bb_zone_pricing`
+- `zone_id` (fk zones)
+- `delivery_fee_per_meal`
+- `commission_pct`
 
-* Maximum number of meals allowed in that duration.
+#### 6.3.3 Vendor per-slot pricing
+`bb_vendor_slot_pricing`
+- `vendor_id` (fk vendors)
+- `slot` (meal_slot)
+- `base_price` (numeric)
+- `active` (bool)
+- `updated_at`
 
-* Allowed slots (for example breakfast and lunch, or any).
+Unique: `(vendor_id, slot)`
 
-* Pricing mode:
+#### 6.3.4 Vendor holidays
+`bb_vendor_holidays`
+- `id`
+- `vendor_id`
+- `date` (date)
+- `slot` (meal_slot, nullable => whole day)
+- `reason` (text)
+- `created_at`
 
-  * Per meal: price per trial meal is calculated from vendor base prices, plus possible trial discount.
-  * Fixed: a simple flat fee for the entire trial.
+Unique: `(vendor_id, date, slot)` treating `slot null` as distinct rule.
 
-* Cooldown period:
+#### 6.3.5 Plans
+`bb_plans`
+- `id`
+- `name`
+- `period_type` (bb_plan_period_type)
+- `allowed_slots` (meal_slot[])  
+- `skip_limits` (jsonb)  
+  Example: `{ "breakfast": 1, "lunch": 2, "dinner": 1 }`
+- `active` (bool)
+- `description`
+- `created_at`, `updated_at`
 
-  * For example, 30 days. This is how long a customer must wait before doing another trial with the same vendor.
+Notes:
+- Skip limits are **per slot per period**.
 
-Vendors can opt in or out of each trial type.
+#### 6.3.6 Subscription grouping (customer UX)
+`bb_subscription_groups`
+- `id`
+- `consumer_id` (profiles)
+- `vendor_id` (vendors)
+- `plan_id` (bb_plans)
+- `status` (active|paused|cancelled) (derived from children in UI, but store for ease)
+- `start_date` (date)
+- `renewal_date` (date)  
+- `created_at`, `updated_at`
 
-## 7.2 Trial user flow
+Unique active group per consumer+vendor: partial unique `(consumer_id, vendor_id)` where status in (active, paused).
 
-On a vendor page:
+#### 6.3.7 Subscription (per slot)
+`bb_subscriptions`
+- `id`
+- `group_id` (bb_subscription_groups)
+- `consumer_id`
+- `vendor_id`
+- `plan_id`
+- `slot` (meal_slot)
+- `weekdays` (int[])  
+- `status` (bb_subscription_status)
+- `credited_skips_used_in_cycle` (int default 0)
+- `created_at`, `updated_at`
 
-* If the customer has not used a trial for that vendor, or is outside cooldown, they see a "Start Trial" button.
-* If they are not eligible (already used and in cooldown), they see only “Subscribe”.
+Unique active per consumer+vendor+slot: partial unique `(consumer_id, vendor_id, slot)` where status in (active, paused).
 
-When starting a trial:
+#### 6.3.8 Cycles
+`bb_cycles`
+- `id`
+- `group_id`
+- `period_type` (weekly|monthly)
+- `cycle_start` (date)
+- `cycle_end` (date)
+- `renewal_date` (date)  
+- `is_first_cycle` (bool)
+- `created_at`
 
-1. Customer selects a trial type.
+Unique: `(group_id, cycle_start)`.
 
-2. Customer selects a start date.
+#### 6.3.9 Invoices
+`bb_invoices`
+- `id`
+- `group_id` (nullable for trial invoices)
+- `consumer_id`
+- `vendor_id`
+- `cycle_id` (nullable)
+- `trial_id` (nullable)
+- `status` (bb_invoice_status)
+- `currency` (text default INR)
+- `subtotal_vendor_base` (numeric)  
+- `delivery_fee_total` (numeric)
+- `commission_total` (numeric)
+- `discount_total` (numeric)
+- `total_amount` (numeric)
+- `razorpay_order_id` (text, nullable)
+- `paid_at` (timestamptz)
+- `created_at`, `updated_at`
 
-3. The system sets the trial window: from start date to start date plus duration minus one day.
+Constraints:
+- exactly one of (`cycle_id`, `trial_id`) must be non-null.
 
-4. Customer sees a calendar for the trial window and chooses individual meals:
+#### 6.3.10 Invoice lines (per slot)
+`bb_invoice_lines`
+- `id`
+- `invoice_id`
+- `subscription_id` (nullable for trials)
+- `slot` (meal_slot)
+- `scheduled_meals` (int)
+- `credits_applied` (int)
+- `billable_meals` (int)
+- `vendor_base_price_per_meal` (numeric snapshot)
+- `delivery_fee_per_meal` (numeric snapshot)
+- `commission_pct` (numeric snapshot)
+- `commission_per_meal` (numeric snapshot)
+- `unit_price_customer` (numeric snapshot)
+- `line_total` (numeric)
 
-   * Dates and slots within that window and allowed by the trial type.
-   * Up to the maximum number of meals allowed.
+#### 6.3.11 Credits
+`bb_credits`
+- `id`
+- `subscription_id`
+- `consumer_id`
+- `vendor_id`
+- `slot` (meal_slot)
+- `status` (bb_credit_status)
+- `reason` (enum text: `skip_within_limit | vendor_holiday | ops_failure | capacity_overflow | admin_adjustment`)
+- `source_order_id` (nullable)
+- `created_at`
+- `expires_at`
+- `used_at` (nullable)
+- `used_invoice_id` (nullable)
 
-5. The system checks:
+#### 6.3.12 Skips
+`bb_skips`
+- `id`
+- `subscription_id`
+- `consumer_id`
+- `vendor_id`
+- `slot` (meal_slot)
+- `service_date` (date)
+- `credited` (bool)
+- `created_at`
 
-   * Choices are within the trial window.
-   * Slots are allowed.
-   * Vendor is not on holiday on those dates and slots.
-   * Meal count is within the allowed limit.
+Unique: `(subscription_id, service_date, slot)`.
 
-6. The system calculates the trial price:
+#### 6.3.13 Orders (v2)
+Option A (recommended): keep existing `orders` for legacy and create `bb_orders` for v2.
 
-   * If per meal:
+`bb_orders`
+- `id`
+- `subscription_id` (nullable)
+- `group_id` (nullable)
+- `trial_id` (nullable)
+- `consumer_id`
+- `vendor_id`
+- `service_date` (date)
+- `slot` (meal_slot)
+- `status` (bb_order_status)
+- `delivery_window_start` (time)
+- `delivery_window_end` (time)
+- `delivery_address_id`
+- `special_instructions`
+- `created_at`, `updated_at`
 
-     * For each chosen meal, use vendor per meal price, optionally reduced by a trial discount.
-     * Sum all.
-   * If fixed:
+Unique: `(subscription_id, service_date, slot)` for subscription orders; `(trial_id, service_date, slot)` for trial meals.
 
-     * Use the flat price defined in the trial type.
+#### 6.3.14 Trials
+`bb_trial_types`
+- `id`
+- `name`
+- `duration_days` (int)
+- `max_meals` (int)
+- `allowed_slots` (meal_slot[])
+- `pricing_mode` (bb_pricing_mode)
+- `discount_pct` (numeric nullable; only if per_meal)
+- `fixed_price` (numeric nullable; only if fixed)
+- `cooldown_days` (int)
+- `active` (bool)
+- `created_at`, `updated_at`
 
-7. Customer reviews and pays one time.
+`bb_vendor_trial_types` (opt-in)
+- `vendor_id`
+- `trial_type_id`
+- `active`
 
-8. Trial is created with a scheduled status, and meals are scheduled.
+`bb_trials`
+- `id`
+- `consumer_id`
+- `vendor_id`
+- `trial_type_id`
+- `start_date`
+- `end_date`
+- `status` (bb_trial_status)
+- `created_at`, `updated_at`
 
-## 7.3 Trial and subscription relationship
+`bb_trial_meals`
+- `id`
+- `trial_id`
+- `service_date`
+- `slot`
+- `created_at`
 
-Trials and subscriptions are separate:
-
-* Trials never auto convert to a subscription.
-* After trial completion, the system nudges the user to subscribe to that vendor.
-
-A customer cannot:
-
-* Start a new trial with the same vendor during the cooldown period.
-* You can decide a simple rule like: one trial per vendor per customer, ever, or allow one trial per vendor per cooldown window.
-
-There is no skip logic in trials in the first version:
-
-* If something is missed due to vendor or operations, you can handle that with vendor compensation or manual credit.
-* This keeps the implementation simpler.
+Unique: `(trial_id, service_date, slot)`.
 
 ---
 
-# 8. Time windows, cutoffs, and delivery
+## 7) RLS policy design (high level)
 
-## 8.1 Delivery windows per slot
+### 7.0 Access control matrix (who can do what)
+- **Customer**
+  - Read: own groups/subscriptions/cycles/invoices/credits/skips/orders/trials
+  - Write: create checkout, request skip, pause/cancel, schedule change (effective next cycle), start-date change (first cycle only)
+- **Vendor**
+  - Read: own orders, capacity views, trial schedule, earnings summaries (derived)
+  - Write: order status updates, base prices, delivery windows, capacity, holidays, trial opt-in
+- **Admin**
+  - Read/write: plans, trial types, platform settings, zone pricing overrides, coupon programs (future)
+- **System (service role)**
+  - Run renewals, generate orders, apply holiday adjustments, expire credits, mark trials completed
 
-Each vendor defines delivery windows per slot such as:
+### 7.1 Customers
+- SELECT own: `consumer_id = auth.uid()`.
+- INSERT: only for own entities (subscription drafts, skips, trial selection) via RPC to ensure validations.
+- UPDATE: limited (pause/cancel, schedule change effective next cycle, start-date change in first cycle)
 
-* Breakfast: 7:00 to 7:30, 7:30 to 8:00, etc.
-* Lunch: 12:00 to 1:00.
-* Dinner: 7:00 to 8:00.
+### 7.2 Vendors
+- SELECT operational views: orders where `vendor_id` belongs to vendor’s user.
+- UPDATE orders: status transitions only for own vendor.
+- UPDATE vendor pricing/slots/capacity/holidays: only own vendor.
 
-For subscription orders:
+### 7.3 Admin
+- Full CRUD on plans, trial types, platform settings, pricing overrides.
 
-* The system stores at least a delivery window start and end time per slot for that vendor.
-* Skips use the earliest time in that window when calculating cutoff.
-
-## 8.2 Skip cutoff
-
-A global cutoff rule:
-
-* Admin sets “skip allowed until X hours before slot delivery start” for example 3 hours.
-* For each meal, the last skip time is delivery start time minus this value.
-
-After cutoff:
-
-* Skip attempt is rejected for that meal.
-
-## 8.3 Schedule change effect
-
-For simplicity in the first version:
-
-* Schedule changes apply from the next cycle.
-
-This avoids mid cycle recalculations and complex conflict resolution.
-
-## 8.4 Start date change
-
-Covered earlier:
-
-* Allowed only during first cycle, before first delivered meal, and only if at least one meal remains before renewal.
-* New start date must be in the future and before renewal date.
+### 7.4 Service role / jobs
+- Use Supabase service role (bypasses RLS) OR define explicit JWT-claim policies for service role. Prefer service role.
 
 ---
 
-# 9. Vendor side experience
+## 8) Core workflows (backend + frontend)
 
-Vendors need tools to operate daily and plan ahead.
+## 8.1 Subscription creation (customer)
 
-## 9.1 Vendor controls
+### UX steps
+1. Choose **Plan** (weekly/monthly)
+2. Select **slots** and for each slot select **weekdays**
+3. Select **start date** (>= tomorrow)
+4. Review:
+   - First cycle window & meals count per slot
+   - First cycle price
+   - Next full cycle estimate
+5. Pay (Razorpay)
+6. Success + show schedule calendar
 
-Vendors can:
+### Backend validations
+For each selected slot:
+- vendor active
+- slot enabled + vendor has base price set
+- capacity check for all scheduled days in first cycle window (optional v1; required before overbooking)
+- at least one deliverable meal before first renewal boundary
+- exclude vendor holidays from scheduled meals
 
-* Set base price per meal per slot.
-* Set delivery windows per slot.
-* Set maximum number of meals per day per slot.
-* Enable or disable slots.
-* Enable or disable each available trial type.
-* Mark holidays for specific dates and slots.
+### Pricing computation
+- Compute meal counts per slot in first cycle window.
+- For each slot, compute per-meal price from vendor base + delivery fee + commission.
+- Sum totals.
 
-## 9.2 Vendor dashboard views
+### Data writes (transaction)
+On “Confirm” (before payment):
+- Create `bb_subscription_group` in `pending_payment` state (or create invoice draft only).
+- Create `bb_subscriptions` rows per selected slot.
+- Create first `bb_cycle` row.
+- Create `bb_invoice` with `pending_payment` and `bb_invoice_lines`.
+- Create Razorpay order and store `razorpay_order_id` on invoice.
 
-Vendors see:
+On webhook payment captured:
+- Mark invoice paid.
+- Activate subscription group + subscriptions.
+- Generate `bb_orders` for the first cycle.
 
-1. **Today’s orders**
-
-   * List per slot and time window.
-   * Shows all meals to prepare and deliver today.
-
-2. **Weekly view**
-
-   * Meal count per day and slot for the current and next week.
-   * Helps plan prep and ingredients.
-
-3. **Capacity view**
-
-   * How full they are per day and slot compared to maximum capacity.
-
-4. **Trials view**
-
-   * Active trials and upcoming trial meals.
-
-5. **Earnings view**
-
-   * Delivered meals and their earnings over past periods.
-
-6. **Settings**
-
-   * Price, windows, capacity, holidays, trial configuration.
-
-Capacity constraints are applied:
-
-* During subscription creation.
-* During trial creation.
-* So that the system does not overbook the vendor.
+Idempotency:
+- Unique constraints + `invoice.status` check; if webhook delivered twice, second run becomes no-op.
 
 ---
 
-# 10. Admin side experience
+## 8.2 Renewal flow (weekly/monthly)
 
-Admins define platform rules, manage vendors, and monitor operations.
+### Job schedule
+- Weekly renewals run every Monday.
+- Monthly renewals run on the 1st.
 
-## 10.1 Plan management
+### Steps per group due
+1. Fetch all active slot subscriptions for (consumer,vendor) where group.renewal_date = today.
+2. Create next `bb_cycle` for the new window.
+3. For each subscription (slot):
+   - Count scheduled meals in the cycle based on weekdays.
+   - Exclude vendor holidays.
+4. Apply credits:
+   - Use oldest available credits first.
+   - Cap credits_applied ≤ scheduled_meals.
+5. Compute invoice totals and create `bb_invoice` + `bb_invoice_lines`.
+6. Charge customer (Razorpay): create order, await capture.
+7. On success: mark invoice paid, mark credits used, generate cycle orders, advance group.renewal_date.
+8. On failure: mark invoice failed; trigger retries; if exhausted, pause subscriptions.
 
-Admins can:
+### 8.2.1 Renewal invoice timing (v1 policy)
+- Invoice is created **on renewal day**.
+- Orders for the cycle are generated **only after invoice payment succeeds**.
+- If payment is pending:
+  - **No new orders** are created for the cycle (prevents service without payment).
+  - Customer sees “Payment required to activate this cycle”.
 
-* Create, edit, and disable plans.
-* Configure:
+### Payment retries
+- Retry schedule: e.g. +6h, +24h, +48h (configurable).
+- After max retries: set group/subscriptions status to paused (effective immediately for next cycle).
 
-  * Period type (weekly or monthly).
-  * Allowed slots.
-  * Skip limits per slot.
-
-## 10.2 Trial management
-
-Admins configure:
-
-* Trial types with:
-
-  * Duration, max meals.
-  * Allowed slots.
-  * Pricing mode and discounts.
-  * Cooldown period.
-
-## 10.3 Platform settings
-
-Admins set:
-
-* Skip cutoff hours.
-* Credit expiry duration in days.
-* Global rules around renewal days, which are fixed for now.
-* Default delivery fee per meal.
-* Default commission percentage.
-
-## 10.4 Zones and cities (future)
-
-Admins can define zones:
-
-* Each zone has a name, geographic area, delivery fee, and commission percentage.
-* Vendors and customers are mapped to zones using their locations.
-* This allows localized pricing and expansion across cities.
-
-## 10.5 Coupons and promotions
-
-Admins can create coupons:
-
-* Coupon codes that give percentage or flat discounts.
-* Can apply:
-
-  * Globally.
-  * To specific vendors.
-  * To trials or subscriptions or both.
-
-Referrals:
-
-* Admins can define referral programs that reward both referrer and new user, often with credits or discounts.
-
-## 10.6 Notifications
-
-Admins manage which events send notifications and can customize templates.
-
-Events include:
-
-* Subscription started.
-* Subscription renewed.
-* Payment failed.
-* Trial started.
-* Trial completed.
-* Credit created.
-* Credit about to expire.
-* Vendor holiday affecting upcoming meals.
-
-Channels may include email, SMS, and push.
+Idempotency:
+- Unique `(group_id, cycle_start)` prevents double cycle creation.
+- Unique `(invoice.cycle_id)` ensures one invoice per cycle.
+- Credit usage uses `FOR UPDATE SKIP LOCKED` to avoid double-spend.
 
 ---
 
-# 11. Background processes and reliability
+## 8.3 Skip flow (customer)
 
-The system relies on scheduled jobs to maintain subscriptions.
+### UX
+- In calendar/order list, upcoming meal shows a “Skip” action until cutoff.
+- UI also shows “credited skips remaining this cycle” per slot.
 
-Key background processes:
+### Rules
+- Allowed only before cutoff = (slot earliest delivery start) − platform `skip_cutoff_hours`.
+- If within plan limit for that slot in the current cycle:
+  - create credit
+  - increment `credited_skips_used_in_cycle`
+  - mark corresponding order `skipped_by_customer`
+- If beyond limit:
+  - mark order `skipped_by_customer`
+  - no credit
 
-1. **Weekly renewal job**
-
-   * Runs every Monday.
-   * Processes weekly subscriptions due for renewal.
-
-2. **Monthly renewal job**
-
-   * Runs on the 1st of each month.
-   * Processes monthly subscriptions.
-
-3. **Order generation job**
-
-   * Usually combined with renewal jobs.
-   * Generates orders for each new cycle.
-
-4. **Payment retry job**
-
-   * Retries failed subscription payments a few times.
-   * If still failing, automatically pauses subscriptions and notifies customers.
-
-5. **Trial completion job**
-
-   * Marks trials as completed when their end date passes.
-   * Sends follow up prompts to subscribe.
-
-6. **Credit expiry job**
-
-   * Expires credits that have passed their validity period.
-   * Optional notifications before expiry.
-
-7. **Holiday adjustment job**
-
-   * Adjusts orders and creates credits when holidays are declared, especially if they affect tomorrow or the next few days.
-
-All critical actions are idempotent, so running jobs again will not double charge or double credit.
+### Implementation notes
+- Skip should be written to `bb_skips` (unique) and order updated.
+- If order not yet generated (shouldn’t happen in v2 because orders are generated per cycle), we still store skip and ensure order generator respects it.
 
 ---
 
-# 12. Customer experience summary
+## 8.4 Vendor holiday flow
 
-For the customer, the system feels like this:
+### UX
+Vendor selects dates and slots to mark holiday.
 
-* They land on a vendor page and see two clear options:
-
-  * Start a trial.
-  * Subscribe.
-
-* Trial:
-
-  * Short, flexible, fully visible, and paid.
-  * Choose days and meals in the specified window.
-  * Try the vendor and decide if they like it.
-
-* Subscription:
-
-  * Pick slots and weekly schedule.
-  * Pick a start date.
-  * See exactly what they will pay for the first cycle and future cycles.
-  * Meals are delivered automatically based on schedule.
-  * They can skip occasionally, within clear rules.
-  * They see credits applied to future bills when they skip within limits or when vendor cancels.
-
-* On their dashboard, they see:
-
-  * A unified card per vendor with:
-
-    * Slots active.
-    * A calendar for this week and next week with clear icons: scheduled, skipped, holiday, delivered.
-    * Skips used and skips remaining for the period.
-    * Credits available and when they expire.
-    * Next renewal date and estimated charge.
-
-* They can:
-
-  * Skip upcoming meals before cutoff.
-  * Change start date in the first cycle before first meal.
-  * Cancel or pause for next cycle.
-  * Start subscriptions after successful trials.
+### System behavior
+- For already-generated upcoming orders affected:
+  - set `bb_orders.status = skipped_by_vendor`
+  - create credits for impacted subscription+slot (if order was billable)
+- For not-yet-generated cycles: generator excludes holiday and creates credit at generation time.
 
 ---
+
+## 8.5 Trial flow
+
+### UX steps
+1. Vendor page shows **Start Trial** if eligible.
+2. Choose trial type.
+3. Choose start date.
+4. Pick meals (date+slot) within the window up to max meals.
+5. Review price and pay.
+6. Trial meals appear in the same calendar (tagged “Trial”).
+
+### Eligibility
+- Customer cannot start a trial if they have an existing trial within cooldown for that vendor.
+
+### Data writes
+- Create `bb_trial` + `bb_trial_meals` + `bb_invoice` (trial_id set).
+- On payment success: create `bb_orders` rows linked to trial.
+
+---
+
+## 9) Frontend implementation plan (Next.js 14 App Router)
+
+### 9.1 Route structure (recommended)
+- Customer
+  - `app/(dashboard)/customer/subscriptions-v2/page.tsx` (grouped view)
+  - `app/(dashboard)/customer/subscriptions-v2/[groupId]/page.tsx` (calendar + billing)
+  - `app/(dashboard)/customer/trials/page.tsx`
+- Vendor
+  - `app/(dashboard)/vendor/settings/pricing/page.tsx`
+  - `app/(dashboard)/vendor/settings/slots/page.tsx`
+  - `app/(dashboard)/vendor/settings/holidays/page.tsx`
+  - `app/(dashboard)/vendor/trials/page.tsx`
+- Admin
+  - `app/(dashboard)/admin/platform-settings/page.tsx`
+  - `app/(dashboard)/admin/plans-v2/page.tsx`
+  - `app/(dashboard)/admin/trial-types/page.tsx`
+
+### 9.2 Components
+- Customer
+  - `SubscriptionBuilder` (slot/weekdays/start date)
+  - `FirstCyclePricingSummary`
+  - `VendorSubscriptionCard` (grouped)
+  - `SubscriptionCalendar` (this + next cycle)
+  - `SkipDialog` (with cutoff/credit info)
+  - `CreditsPanel` (available + expiry)
+- Vendor
+  - `VendorPricingForm` (base prices per slot)
+  - `VendorCapacityForm`
+  - `VendorHolidayCalendar`
+  - `VendorTrialOptInTable`
+- Admin
+  - `PlanEditorV2` (period type, allowed slots, skip limits)
+  - `TrialTypeEditor`
+  - `PlatformSettingsForm`
+
+### 9.3 UX requirements
+- Pricing transparency: show first cycle vs next cycle.
+- Clear renewal date.
+- Clear skip remaining per slot and credits available.
+- Accessible controls (keyboard navigable, readable labels).
+
+### 9.4 Screen-level requirements (acceptance criteria checkpoints)
+
+#### 9.4.1 Vendor page CTAs
+- If eligible for trial → show **Start Trial** and **Subscribe**.
+- If not eligible → show **Subscribe** and “Trial available again in X days” (when in cooldown).
+
+#### 9.4.2 Subscribe flow review step must show
+- First cycle: start date → renewal date, per-slot scheduled meals, holidays excluded.
+- First cycle total (with breakdown per slot).
+- Next full cycle estimate (same breakdown).
+- Copy: “Renewals happen every Monday / 1st” depending on plan type.
+
+#### 9.4.3 Customer subscription card must show
+- Vendor name, active slots.
+- Next renewal date + estimated charge.
+- This cycle skip remaining per slot.
+- Credits available per slot + nearest expiry.
+
+#### 9.4.4 Skip UX must show
+- Cutoff time for the selected meal in local timezone.
+- Whether this skip will be credited (based on remaining credited skips).
+
+---
+
+## 10) Backend implementation plan (Supabase)
+
+### 10.1 SQL migrations
+- Create `bb_*` tables and enums.
+- Add indexes for:
+  - cycles due today
+  - orders by vendor/date/slot
+  - credits by subscription/status/created_at
+  - trial eligibility queries
+
+### 10.2 Postgres RPC functions (recommended)
+Implement critical operations in SQL for atomicity:
+- `bb_preview_subscription_pricing(vendor_id, plan_id, start_date, slot_weekdays_json)` → returns first cycle + next cycle breakdown.
+- `bb_create_subscription_checkout(...)` → creates group/subs/cycle/invoice and returns invoice_id + razorpay receipt metadata.
+- `bb_apply_skip(subscription_id, service_date, slot)` → applies cutoff + limit, creates credit if needed, updates order.
+- `bb_run_renewals(period_type, run_date)` → creates invoices for due groups and returns list.
+- `bb_finalize_invoice_paid(invoice_id, razorpay_payment_id, razorpay_order_id)` → activates and generates orders (idempotent).
+
+### 10.2.1 RPC contract details (inputs/outputs)
+
+#### `bb_preview_subscription_pricing`
+- **Input**: vendor_id, plan_id, start_date, `{ slot: weekdays[] }`
+- **Output**:
+  - `first_cycle`: cycle_start/cycle_end/renewal_date + per-slot scheduled_meals + amount
+  - `next_cycle_estimate`: same structure for a full next cycle
+  - `validation_errors[]` (slot-specific)
+
+#### `bb_create_subscription_checkout`
+- **Input**: vendor_id, plan_id, start_date, address_id, slot_weekdays, special_instructions_by_slot
+- **Output**: invoice_id, total_amount, razorpay_receipt, renewal_date
+- **Side effects** (transaction): create group, subscriptions, cycle, invoice, invoice lines.
+
+#### `bb_apply_skip`
+- **Input**: subscription_id, service_date, slot
+- **Output**: `{ credited: boolean, credit_id?: uuid }`
+- **Side effects** (transaction): create skip, maybe create credit, update order status.
+
+#### `bb_run_renewals`
+- **Input**: period_type, run_date
+- **Output**: list of invoices created `{ invoice_id, group_id, consumer_id, vendor_id, total_amount }`
+- **Notes**: does not create orders; orders are generated only after payment success.
+
+#### `bb_finalize_invoice_paid`
+- **Input**: invoice_id, razorpay_payment_id, razorpay_order_id
+- **Output**: `{ created_orders: int }`
+- **Side effects**: mark invoice paid, consume credits, generate orders, advance renewal_date, reset per-cycle counters.
+
+### 10.3 Background jobs
+- `renew_weekly` (Mondays)
+- `renew_monthly` (1st)
+- `payment_retry`
+- `complete_trials`
+- `expire_credits`
+- `holiday_adjustments` (optional)
+
+### 10.3.1 Job idempotency requirements (must-have)
+- Every job run must be safe to re-run without double charging or double crediting.
+- Use a combination of:
+  - unique constraints (cycle per group, invoice per cycle)
+  - state machine checks (`invoice.status` transitions)
+  - row-level locks (`FOR UPDATE`) and/or advisory locks per group
+  - deterministic idempotency keys (e.g., `group_id + cycle_start`)
+
+### 10.3.2 Performance requirements
+- Renewal job must process N groups without timeouts; design for batching:
+  - fetch due groups in pages
+  - process per group within a DB transaction
+  - avoid N+1 queries by preloading vendor pricing and holidays in the cycle window
+
+### 10.4 Razorpay integration
+- Webhook notes must include: `invoice_id`, `consumer_id`, `vendor_id`, `kind` (cycle|trial).
+- Webhook handler:
+  - verify signature
+  - upsert payment record
+  - call `bb_finalize_invoice_paid(invoice_id, ...)`
+
+---
+
+## 11) Analytics / Metrics
+
+### North star
+- **Meals delivered per active customer per week**
+
+### Operational KPIs
+- Payment success rate at renewal
+- Credit issuance rate and reasons
+- Skip rate within limit vs beyond limit
+- Vendor on-time delivery proxy (status transitions)
+- Capacity utilization per vendor/slot/day
+
+### Product KPIs
+- Trial → subscription conversion
+- Average time to subscribe after trial
+- Subscription retention by plan type
+
+---
+
+## 12) Edge cases & policies
+
+### 12.1 Partial first cycle
+- Customer pays only for scheduled meals between start_date and first renewal boundary.
+
+### 12.2 Start date changes (v1)
+Allowed only:
+- during first cycle
+- before first delivered meal
+- new start date >= tomorrow and < renewal date
+- must still yield at least one scheduled meal
+
+Policy v1: start date change does **not** adjust first-cycle invoice amount (no refunds/extra charges).
+
+### 12.3 Schedule changes
+Apply from next cycle only.
+
+### 12.4 Credits
+- Expire after `credit_expiry_days`.
+- Apply oldest first.
+- Do not extend cycle or create extra meals.
+
+---
+
+## 13) Migration & rollout plan
+
+### 13.1 Phase 0: schema + internal tooling
+- Create `bb_*` schema.
+- Add admin settings pages for platform settings + plans-v2 + trial types.
+
+### 13.2 Phase 1: vendor settings
+- Vendor sets base price per slot, delivery windows, holidays.
+- Validate data completeness.
+
+### 13.3 Phase 2: new subscription & trial checkout
+- Ship new vendor page CTA: “Start Trial” + “Subscribe” (v2).
+- Keep legacy subscriptions untouched.
+
+### 13.4 Phase 3: customer dashboards v2
+- Add `subscriptions-v2` pages with calendar + credits + skips.
+
+### 13.5 Phase 4: migration of existing subscriptions (optional)
+- For each legacy subscription:
+  - create `bb_group`
+  - create `bb_subscriptions` per existing `subscription_prefs` slot
+  - set weekdays from prefs
+  - set next renewal to next Monday/1st depending on chosen plan mapping
+
+Note: legacy plan periods include biweekly; v2 does not. Decide mapping:
+- biweekly → weekly (with 2-week skip limits/price recalibration) or deprecate and force weekly/monthly for new signups.
+
+---
+
+## 14) Test plan
+
+### 14.1 Unit tests
+- Cycle boundary calculations (weekly Monday, monthly 1st)
+- Pricing formula correctness
+- Credit application ordering and caps
+
+### 14.2 Integration tests
+- Subscription creation → invoice → webhook finalize → orders generated
+- Renewal job idempotency (double-run)
+- Skip before/after cutoff; within/beyond limit
+- Holiday marking adjusts orders and creates credits
+- Trial creation + cooldown enforcement
+
+---
+
+## 15) Open decisions (must be locked before implementation)
+1. **Timezone**: confirm single timezone (Asia/Kolkata) for v1.
+2. **Pause/cancel semantics**: whether current-cycle deliveries continue; recommended: pause effective next renewal.
+3. **Capacity enforcement**: strict block at subscription creation vs allow and compensate with credits.
+4. **Coupons/referrals**: include in v1 invoices or defer.
+
+---
+
+## 16) Implementation checklist (engineering-ready)
+
+### 16.1 Backend (DB + jobs)
+- [ ] Add `bb_platform_settings` + admin UI to edit it
+- [ ] Add `bb_plans` + admin UI (allowed slots, skip limits)
+- [ ] Add vendor pricing + holiday tables + vendor UI
+- [ ] Implement pricing preview RPC
+- [ ] Implement subscription checkout RPC
+- [ ] Implement invoice-paid finalization RPC
+- [ ] Implement skip RPC with cutoff + per-cycle limits
+- [ ] Implement renewal jobs (weekly/monthly) and retry job
+- [ ] Implement credit expiry job
+- [ ] Implement trial types + trial flow RPCs
+
+### 16.2 Frontend (customer/vendor/admin)
+- [ ] Vendor page CTA logic (trial eligibility)
+- [ ] Subscription builder with start date + per-slot weekdays
+- [ ] Pricing review UI showing first cycle + next cycle estimate
+- [ ] Customer subscription dashboard (grouped) + detail calendar
+- [ ] Skip UX with cutoff + credited indicator
+- [ ] Vendor settings: base price per slot, delivery windows, holidays, capacity
+- [ ] Admin: plans-v2, trial types, platform settings
+
+---
+
+## Appendix A: Recommended “cutover” strategy for the repo
+- Keep existing Phase-2 routes + tables working.
+- Build v2 in parallel with `bb_*`.
+- Add a feature flag `SUBSCRIPTIONS_V2_ENABLED` to route traffic.
+- Migrate gradually, then archive legacy paths.

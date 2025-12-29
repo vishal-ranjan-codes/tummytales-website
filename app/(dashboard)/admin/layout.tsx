@@ -17,6 +17,8 @@ import {
   BarChart,
   Settings,
   HelpCircle,
+  Sparkles,
+  FileText,
 } from 'lucide-react'
 
 const adminMenuItems: MenuItem[] = [
@@ -46,15 +48,24 @@ const adminMenuItems: MenuItem[] = [
     icon: Package,
   },
   {
+    label: 'Invoices',
+    href: '/admin/invoices',
+    icon: FileText,
+  },
+  {
+    label: 'Platform Settings',
+    href: '/admin/platform-settings',
+    icon: Settings,
+  },
+  {
+    label: 'Trial Types',
+    href: '/admin/trial-types',
+    icon: Sparkles,
+  },
+  {
     label: 'Analytics',
     href: '/admin/analytics',
     icon: BarChart,
-    comingSoon: true,
-  },
-  {
-    label: 'Settings',
-    href: '/admin/settings',
-    icon: Settings,
     comingSoon: true,
   },
   {

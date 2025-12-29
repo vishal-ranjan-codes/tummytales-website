@@ -1,23 +1,20 @@
 /**
  * Customer Subscriptions Page (Server Component)
- * Subscription management for customers
+ * List of subscription groups
  */
 
 import { requireRole } from '@/lib/auth/server'
-import { getUserSubscriptionsWithDetails } from '@/lib/subscriptions/subscription-actions'
+import { getUserSubscriptionGroups } from '@/lib/bb-subscriptions/bb-subscription-queries'
 import CustomerSubscriptionsClient from './CustomerSubscriptionsClient'
 
 export default async function CustomerSubscriptionsPage() {
-  // Require customer role
   await requireRole('customer')
-  
-  // Fetch user subscriptions with details
-  const subscriptionsResult = await getUserSubscriptionsWithDetails()
-  
-  if (!subscriptionsResult.success || !subscriptionsResult.data) {
-    return <CustomerSubscriptionsClient initialSubscriptions={[]} />
-  }
-  
-  return <CustomerSubscriptionsClient initialSubscriptions={subscriptionsResult.data} />
-}
 
+  const groupsResult = await getUserSubscriptionGroups()
+
+  if (!groupsResult.success || !groupsResult.data) {
+    return <CustomerSubscriptionsClient initialGroups={[]} />
+  }
+
+  return <CustomerSubscriptionsClient initialGroups={groupsResult.data} />
+}

@@ -58,6 +58,14 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Allow unauthenticated access to subscription wizard routes
+  const isSubscriptionWizardRoute = path.startsWith('/vendors/') && path.endsWith('/subscribe')
+  const isTrialWizardRoute = path.startsWith('/vendors/') && path.endsWith('/trial')
+  if (isSubscriptionWizardRoute || isTrialWizardRoute) {
+    // Allow access regardless of authentication status
+    return supabaseResponse
+  }
+
   // Handle protected routes
   if (isProtectedRoute && !user) {
     const loginUrl = new URL('/login', request.url)

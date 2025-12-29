@@ -2,7 +2,7 @@
 
 /**
  * Admin Plans Client Component
- * Handles plan management with CRUD operations
+ * Handles bb_plan management with CRUD operations
  */
 
 import { useState, useMemo, useCallback } from 'react'
@@ -37,37 +37,47 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Plus, Edit, Trash2, Package, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  createPlan,
-  updatePlan,
-  deletePlan,
-} from '@/lib/admin/plan-actions'
-import { formatCurrency } from '@/lib/utils/payment'
-import type { Plan, SubscriptionPeriod, MealsPerDay, CreatePlanInput, UpdatePlanInput } from '@/types/subscription'
+  createBBPlan,
+  updateBBPlan,
+  deleteBBPlan,
+} from '@/lib/admin/bb-plan-actions'
+import type {
+  BBPlan,
+  BBPlanPeriodType,
+  MealSlot,
+  CreateBBPlanInput,
+  UpdateBBPlanInput,
+} from '@/types/bb-subscription'
 
 interface AdminPlansClientProps {
-  initialPlans: Plan[]
+  initialPlans: BBPlan[]
 }
 
-export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps) {
-  const [plans] = useState(initialPlans)
+const MEAL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner']
+const PERIOD_TYPES: BBPlanPeriodType[] = ['weekly', 'monthly']
+
+export default function AdminPlansClient({
+  initialPlans,
+}: AdminPlansClientProps) {
+  const [plans, setPlans] = useState(initialPlans)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<string>('all')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  
+
   // Create/Edit dialog state
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
-  const [formData, setFormData] = useState<CreatePlanInput>({
+  const [editingPlan, setEditingPlan] = useState<BBPlan | null>(null)
+  const [formData, setFormData] = useState<CreateBBPlanInput>({
     name: '',
-    period: 'weekly',
-    meals_per_day: { breakfast: false, lunch: false, dinner: false },
-    base_price: 0,
-    currency: 'INR',
+    period_type: 'weekly',
+    allowed_slots: [],
+    skip_limits: { breakfast: 0, lunch: 0, dinner: 0 },
     description: '',
-    trial_days: 3,
+    active: true,
   })
 
   // Filtered plans
@@ -76,14 +86,15 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
 
     if (search.trim()) {
       const searchLower = search.trim().toLowerCase()
-      filtered = filtered.filter(plan =>
-        plan.name.toLowerCase().includes(searchLower) ||
-        plan.description?.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(
+        (plan) =>
+          plan.name.toLowerCase().includes(searchLower) ||
+          plan.description?.toLowerCase().includes(searchLower)
       )
     }
 
     if (activeFilter !== 'all') {
-      filtered = filtered.filter(plan => 
+      filtered = filtered.filter((plan) =>
         activeFilter === 'active' ? plan.active : !plan.active
       )
     }
@@ -92,74 +103,88 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
   }, [plans, search, activeFilter])
 
   const loadPlans = useCallback(async () => {
-    // Refetch plans - this would typically use a server action or API route
-    // For now, we'll reload the page data
-    window.location.reload()
+    try {
+      const { getBBPlans } = await import('@/lib/admin/bb-plan-actions')
+      const result = await getBBPlans(false)
+      if (result.success && result.data) {
+        setPlans(result.data)
+      }
+    } catch (error) {
+      console.error('Error reloading plans:', error)
+      // Fallback to page reload if import fails
+      window.location.reload()
+    }
   }, [])
 
   const handleCreate = () => {
     setEditingPlan(null)
     setFormData({
       name: '',
-      period: 'weekly',
-      meals_per_day: { breakfast: false, lunch: false, dinner: false },
-      base_price: 0,
-      currency: 'INR',
+      period_type: 'weekly',
+      allowed_slots: [],
+      skip_limits: { breakfast: 0, lunch: 0, dinner: 0 },
       description: '',
-      trial_days: 3,
+      active: true,
     })
     setDialogOpen(true)
   }
 
-  const handleEdit = (plan: Plan) => {
+  const handleEdit = (plan: BBPlan) => {
     setEditingPlan(plan)
     setFormData({
       name: plan.name,
-      period: plan.period,
-      meals_per_day: plan.meals_per_day,
-      base_price: plan.base_price,
-      currency: plan.currency,
+      period_type: plan.period_type,
+      allowed_slots: plan.allowed_slots,
+      skip_limits: plan.skip_limits,
       description: plan.description || '',
-      trial_days: plan.trial_days,
+      active: plan.active,
     })
     setDialogOpen(true)
   }
 
   const handleSubmit = async () => {
-    if (!formData.name || formData.base_price <= 0) {
-      toast.error('Please fill in all required fields')
+    if (!formData.name.trim()) {
+      toast.error('Plan name is required')
       return
     }
 
-    if (!formData.meals_per_day.breakfast && 
-        !formData.meals_per_day.lunch && 
-        !formData.meals_per_day.dinner) {
-      toast.error('Please select at least one meal slot')
+    if (formData.allowed_slots.length === 0) {
+      toast.error('At least one slot must be selected')
       return
     }
 
-    setActionLoading('submit')
+    // Validate skip limits: only allow skip limits for allowed slots
+    const invalidSkipSlots = Object.keys(formData.skip_limits).filter(
+      (slot) =>
+        !formData.allowed_slots.includes(slot as MealSlot) &&
+        (formData.skip_limits[slot as MealSlot] || 0) > 0
+    )
+
+    if (invalidSkipSlots.length > 0) {
+      toast.error(
+        `Skip limits can only be set for allowed slots. Please remove limits for: ${invalidSkipSlots.join(', ')}`
+      )
+      return
+    }
+
+    setActionLoading(editingPlan?.id || 'new')
 
     try {
+      let result
       if (editingPlan) {
-        const result = await updatePlan(editingPlan.id, formData as UpdatePlanInput)
-        if (result.success) {
-          toast.success('Plan updated successfully')
-          setDialogOpen(false)
-          await loadPlans()
-        } else {
-          toast.error(result.error || 'Failed to update plan')
-        }
+        result = await updateBBPlan(editingPlan.id, formData as UpdateBBPlanInput)
       } else {
-        const result = await createPlan(formData)
-        if (result.success) {
-          toast.success('Plan created successfully')
-          setDialogOpen(false)
-          await loadPlans()
-        } else {
-          toast.error(result.error || 'Failed to create plan')
-        }
+        result = await createBBPlan(formData)
       }
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to save plan')
+        return
+      }
+
+      toast.success(`Plan ${editingPlan ? 'updated' : 'created'} successfully`)
+      setDialogOpen(false)
+      loadPlans()
     } catch (error) {
       console.error('Error saving plan:', error)
       toast.error('An unexpected error occurred')
@@ -170,20 +195,51 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
 
   const handleDelete = async (planId: string) => {
     setActionLoading(planId)
+
     try {
-      const result = await deletePlan(planId)
-      if (result.success) {
-        toast.success('Plan deleted successfully')
-        await loadPlans()
-      } else {
+      const result = await deleteBBPlan(planId)
+
+      if (!result.success) {
         toast.error(result.error || 'Failed to delete plan')
+        return
       }
+
+      toast.success('Plan deleted successfully')
+      loadPlans()
     } catch (error) {
       console.error('Error deleting plan:', error)
       toast.error('An unexpected error occurred')
     } finally {
       setActionLoading(null)
     }
+  }
+
+  const toggleSlot = (slot: MealSlot) => {
+    const newAllowedSlots = formData.allowed_slots.includes(slot)
+      ? formData.allowed_slots.filter((s) => s !== slot)
+      : [...formData.allowed_slots, slot]
+
+    // If removing a slot, reset its skip limit to 0
+    const newSkipLimits = { ...formData.skip_limits }
+    if (!newAllowedSlots.includes(slot)) {
+      newSkipLimits[slot] = 0
+    }
+
+    setFormData({
+      ...formData,
+      allowed_slots: newAllowedSlots,
+      skip_limits: newSkipLimits,
+    })
+  }
+
+  const updateSkipLimit = (slot: MealSlot, value: number) => {
+    setFormData({
+      ...formData,
+      skip_limits: {
+        ...formData.skip_limits,
+        [slot]: Math.max(0, value),
+      },
+    })
   }
 
   const getStatusBadge = (active: boolean) => {
@@ -194,21 +250,15 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
     )
   }
 
-  const getMealsPerDayText = (meals: MealsPerDay) => {
-    const slots = []
-    if (meals.breakfast) slots.push('Breakfast')
-    if (meals.lunch) slots.push('Lunch')
-    if (meals.dinner) slots.push('Dinner')
-    return slots.join(', ') || 'None'
-  }
-
   return (
     <div className="dashboard-page-content space-y-6">
       {/* Header */}
       <div className="dashboard-page-header flex items-center justify-between flex-wrap gap-4 border-b theme-border-color px-4 py-3 md:py-5 md:px-3 lg:px-6 lg:py-4">
         <div>
           <h1 className="theme-h4">Subscription Plans</h1>
-          <p className="theme-fc-light mt-1">Manage subscription plan templates</p>
+          <p className="theme-fc-light mt-1">
+            Manage subscription plan templates
+          </p>
         </div>
         <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-2" />
@@ -259,13 +309,24 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
               <table className="w-full">
                 <thead className="theme-bg-secondary border-b theme-border-color">
                   <tr>
-                    <th className="text-left p-4 font-semibold theme-fc-heading">Name</th>
-                    <th className="text-left p-4 font-semibold theme-fc-heading">Period</th>
-                    <th className="text-left p-4 font-semibold theme-fc-heading">Meals</th>
-                    <th className="text-left p-4 font-semibold theme-fc-heading">Price</th>
-                    <th className="text-left p-4 font-semibold theme-fc-heading">Trial Days</th>
-                    <th className="text-left p-4 font-semibold theme-fc-heading">Status</th>
-                    <th className="text-left p-4 font-semibold theme-fc-heading">Actions</th>
+                    <th className="text-left p-4 font-semibold theme-fc-heading">
+                      Name
+                    </th>
+                    <th className="text-left p-4 font-semibold theme-fc-heading">
+                      Period
+                    </th>
+                    <th className="text-left p-4 font-semibold theme-fc-heading">
+                      Allowed Slots
+                    </th>
+                    <th className="text-left p-4 font-semibold theme-fc-heading">
+                      Skip Limits
+                    </th>
+                    <th className="text-left p-4 font-semibold theme-fc-heading">
+                      Status
+                    </th>
+                    <th className="text-left p-4 font-semibold theme-fc-heading">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -275,26 +336,28 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
                       className="border-b theme-border-color hover:theme-bg-secondary transition-colors"
                     >
                       <td className="p-4">
-                        <div className="font-medium theme-fc-heading">{plan.name}</div>
+                        <div className="font-medium theme-fc-heading">
+                          {plan.name}
+                        </div>
                         {plan.description && (
-                          <div className="text-sm theme-fc-light mt-1">{plan.description}</div>
+                          <div className="text-sm theme-fc-light mt-1">
+                            {plan.description}
+                          </div>
                         )}
                       </td>
                       <td className="p-4 theme-fc-light capitalize">
-                        {plan.period}
+                        {plan.period_type}
                       </td>
                       <td className="p-4 theme-fc-light text-sm">
-                        {getMealsPerDayText(plan.meals_per_day)}
+                        {plan.allowed_slots.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(', ') || 'None'}
                       </td>
-                      <td className="p-4 theme-fc-heading font-medium">
-                        {formatCurrency(plan.base_price, plan.currency)}
+                      <td className="p-4 theme-fc-light text-sm">
+                        {Object.entries(plan.skip_limits)
+                          .filter(([, v]) => v > 0)
+                          .map(([slot, limit]) => `${slot}: ${limit}`)
+                          .join(', ') || 'None'}
                       </td>
-                      <td className="p-4 theme-fc-light">
-                        {plan.trial_days} days
-                      </td>
-                      <td className="p-4">
-                        {getStatusBadge(plan.active)}
-                      </td>
+                      <td className="p-4">{getStatusBadge(plan.active)}</td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <Button
@@ -321,7 +384,8 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete Plan</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to delete &quot;{plan.name}&quot;? This will deactivate the plan.
+                                  Are you sure you want to delete &quot;
+                                  {plan.name}&quot;? This will deactivate the plan.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -355,8 +419,8 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
             </DialogTitle>
             <DialogDescription>
               {editingPlan
-                ? 'Update the subscription plan details'
-                : 'Create a new subscription plan template'}
+                ? 'Update plan details below'
+                : 'Fill in the details to create a new subscription plan'}
             </DialogDescription>
           </DialogHeader>
 
@@ -367,152 +431,124 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., 7-Day Lunch Plan"
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="e.g., Weekly Full Board"
+                required
               />
             </div>
 
-            {/* Period */}
+            {/* Period Type */}
             <div className="space-y-2">
-              <Label htmlFor="period">Period *</Label>
+              <Label htmlFor="period_type">Period Type *</Label>
               <Select
-                value={formData.period}
-                onValueChange={(value: SubscriptionPeriod) =>
-                  setFormData({ ...formData, period: value })
-                }
+                value={formData.period_type}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, period_type: value as BBPlanPeriodType })
+                }}
               >
-                <SelectTrigger id="period">
-                  <SelectValue />
+                <SelectTrigger id="period_type">
+                  <SelectValue placeholder="Select period type" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Biweekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
+                <SelectContent className="z-[101]">
+                  {PERIOD_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Meals Per Day */}
+            {/* Allowed Slots */}
             <div className="space-y-2">
-              <Label>Meals Per Day *</Label>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="breakfast"
-                    checked={formData.meals_per_day.breakfast}
-                    onCheckedChange={(checked) =>
-                      setFormData({
-                        ...formData,
-                        meals_per_day: {
-                          ...formData.meals_per_day,
-                          breakfast: checked === true,
-                        },
-                      })
-                    }
-                  />
-                  <Label htmlFor="breakfast" className="font-normal cursor-pointer">
-                    Breakfast
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="lunch"
-                    checked={formData.meals_per_day.lunch}
-                    onCheckedChange={(checked) =>
-                      setFormData({
-                        ...formData,
-                        meals_per_day: {
-                          ...formData.meals_per_day,
-                          lunch: checked === true,
-                        },
-                      })
-                    }
-                  />
-                  <Label htmlFor="lunch" className="font-normal cursor-pointer">
-                    Lunch
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="dinner"
-                    checked={formData.meals_per_day.dinner}
-                    onCheckedChange={(checked) =>
-                      setFormData({
-                        ...formData,
-                        meals_per_day: {
-                          ...formData.meals_per_day,
-                          dinner: checked === true,
-                        },
-                      })
-                    }
-                  />
-                  <Label htmlFor="dinner" className="font-normal cursor-pointer">
-                    Dinner
-                  </Label>
-                </div>
+              <Label>Allowed Slots *</Label>
+              <div className="flex gap-4">
+                {MEAL_SLOTS.map((slot) => (
+                  <div key={slot} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`slot-${slot}`}
+                      checked={formData.allowed_slots.includes(slot)}
+                      onCheckedChange={() => toggleSlot(slot)}
+                    />
+                    <Label
+                      htmlFor={`slot-${slot}`}
+                      className="cursor-pointer capitalize"
+                    >
+                      {slot}
+                    </Label>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Base Price */}
+            {/* Skip Limits */}
             <div className="space-y-2">
-              <Label htmlFor="base_price">Base Price (INR) *</Label>
-              <Input
-                id="base_price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.base_price}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    base_price: parseFloat(e.target.value) || 0,
-                  })
-                }
-                placeholder="0.00"
-              />
-            </div>
-
-            {/* Currency */}
-            <div className="space-y-2">
-              <Label htmlFor="currency">Currency</Label>
-              <Input
-                id="currency"
-                value={formData.currency}
-                onChange={(e) =>
-                  setFormData({ ...formData, currency: e.target.value })
-                }
-                placeholder="INR"
-              />
+              <Label>Skip Limits (per cycle)</Label>
+              <p className="text-sm theme-fc-light mb-2">
+                Set skip limits only for allowed slots
+              </p>
+              <div className="grid grid-cols-3 gap-4">
+                {MEAL_SLOTS.map((slot) => {
+                  const isAllowed = formData.allowed_slots.includes(slot)
+                  return (
+                    <div key={slot} className="space-y-1">
+                      <Label
+                        htmlFor={`skip-${slot}`}
+                        className={`text-sm capitalize ${
+                          !isAllowed ? 'opacity-50' : ''
+                        }`}
+                      >
+                        {slot}
+                        {!isAllowed && ' (not allowed)'}
+                      </Label>
+                      <Input
+                        id={`skip-${slot}`}
+                        type="number"
+                        min="0"
+                        value={formData.skip_limits[slot] || 0}
+                        onChange={(e) =>
+                          updateSkipLimit(
+                            slot,
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        disabled={!isAllowed}
+                        className={!isAllowed ? 'opacity-50 cursor-not-allowed' : ''}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
             </div>
 
             {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
-              <Input
+              <Textarea
                 id="description"
-                value={formData.description || ''}
+                value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Plan description (optional)"
+                placeholder="Plan description..."
+                rows={3}
               />
             </div>
 
-            {/* Trial Days */}
-            <div className="space-y-2">
-              <Label htmlFor="trial_days">Trial Days</Label>
-              <Input
-                id="trial_days"
-                type="number"
-                min="0"
-                value={formData.trial_days}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    trial_days: parseInt(e.target.value) || 3,
-                  })
+            {/* Active */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="active"
+                checked={formData.active}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, active: checked === true })
                 }
               />
+              <Label htmlFor="active" className="cursor-pointer">
+                Active
+              </Label>
             </div>
           </div>
 
@@ -520,15 +556,12 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
             <Button
               variant="outline"
               onClick={() => setDialogOpen(false)}
-              disabled={actionLoading === 'submit'}
+              disabled={!!actionLoading}
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={actionLoading === 'submit'}
-            >
-              {actionLoading === 'submit' ? 'Saving...' : editingPlan ? 'Update' : 'Create'}
+            <Button onClick={handleSubmit} disabled={!!actionLoading}>
+              {actionLoading ? 'Saving...' : editingPlan ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -536,4 +569,3 @@ export default function AdminPlansClient({ initialPlans }: AdminPlansClientProps
     </div>
   )
 }
-

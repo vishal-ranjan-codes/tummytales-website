@@ -17,7 +17,12 @@
     "supabase:db:reset": "npx supabase db reset",
     "supabase:db:push": "npx supabase db push",
     "verify:supabase": "tsx scripts/verify-supabase.ts",
-    "test:orders": "tsx scripts/test-order-generation.ts"
+    "test:orders": "tsx scripts/test-order-generation.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest __tests__/bb-subscriptions",
+    "test:e2e": "jest __tests__/e2e"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.920.0",

@@ -1,63 +1,70 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { completeTrials } from '@/lib/services/trial-service'
-
 /**
- * Trial Completion Cron Job
- * Runs daily at 3 AM IST
- * Marks completed trials and triggers notifications
+ * Complete Trials Cron Job
+ * Marks trials as completed after end_date
+ * Enhanced with job tracking and batching
  */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { executeTrialCompletionJob } from '@/lib/jobs/trial-completion-job'
+
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300 // 5 minutes
+
 export async function GET(request: NextRequest) {
+  return handleRequest(request)
+}
+
+export async function POST(request: NextRequest) {
+  return handleRequest(request)
+}
+
+async function handleRequest(request: NextRequest) {
+  // Verify cron secret for security
+  const authHeader = request.headers.get('authorization')
+  const expectedAuth = `Bearer ${process.env.CRON_SECRET}`
+
+  if (!process.env.CRON_SECRET) {
+    console.error('[Trial Completion Cron] CRON_SECRET not configured')
+    return NextResponse.json(
+      { error: 'Cron secret not configured' },
+      { status: 500 }
+    )
+  }
+
+  if (authHeader !== expectedAuth) {
+    console.warn('[Trial Completion Cron] Unauthorized access attempt')
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+
   try {
-    // Verify cron secret
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const supabase = await createClient()
+    console.log('[Trial Completion Cron] Starting trial completion job...')
     
-    // Complete trials
-    const completedCount = await completeTrials(supabase)
-
-    // Log to jobs table
-    await supabase
-      .from('jobs')
-      .insert({
-        job_type: 'trial_expiry',
-        status: 'success',
-        payload: { completed_count: completedCount },
-        run_at: new Date().toISOString(),
-      })
-
-    // TODO: Trigger notifications for completed trials
-    // This would integrate with your notification system
+    const result = await executeTrialCompletionJob()
+    
+    console.log('[Trial Completion Cron] Trial completion job completed:', result)
 
     return NextResponse.json({
       success: true,
-      completedCount,
-      message: `Completed ${completedCount} trials`,
+      timestamp: new Date().toISOString(),
+      result: {
+        processed: result.processed,
+        completed: result.completed,
+        errors: result.errors,
+        hasMore: result.hasMore,
+        completedByVendor: result.completedByVendor,
+      },
     })
-  } catch (error) {
-    console.error('Error completing trials:', error)
-    
-    // Log error to jobs table
-    try {
-      const supabase = await createClient()
-      await supabase
-        .from('jobs')
-        .insert({
-          job_type: 'trial_expiry',
-          status: 'failed',
-          last_error: error instanceof Error ? error.message : 'Unknown error',
-          run_at: new Date().toISOString(),
-        })
-    } catch (logError) {
-      console.error('Failed to log job error:', logError)
-    }
-
+  } catch (error: unknown) {
+    console.error('[Trial Completion Cron] Fatal error:', error)
     return NextResponse.json(
-      { error: 'Failed to complete trials', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        success: false,
+        error: (error as Error).message || 'Internal server error',
+        timestamp: new Date().toISOString(),
+      },
       { status: 500 }
     )
   }

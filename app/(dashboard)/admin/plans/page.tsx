@@ -1,26 +1,24 @@
 /**
  * Admin Plans Page (Server Component)
- * Plan management for administrators
- * Uses Native React Server Components pattern with unified utilities
+ * BB Plan management for administrators
  */
 
 import { requireRole } from '@/lib/auth/server'
-import { getPlans } from '@/lib/admin/plan-actions'
+import { getBBPlans } from '@/lib/admin/bb-plan-actions'
 import AdminPlansClient from './AdminPlansClient'
 
 export default async function AdminPlansPage() {
-  // Require admin role and get auth state
+  // Require admin role
   await requireRole('admin')
-  
-  // Fetch plans data on server
-  const plansResult = await getPlans(false) // Get all plans (active and inactive)
-  
+
+  // Fetch bb_plans data
+  const plansResult = await getBBPlans(false) // Get all plans (active and inactive)
+
   if (!plansResult.success || !plansResult.data) {
     // If error, pass empty array to client
     return <AdminPlansClient initialPlans={[]} />
   }
-  
-  // Pass data to client component for rendering
+
+  // Pass data to client component
   return <AdminPlansClient initialPlans={plansResult.data} />
 }
-

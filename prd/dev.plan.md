@@ -692,130 +692,296 @@ Refer to these for detailed implementation information.
 
 ---
 
-## Phase 2: Customer Subscriptions & Orders (Week 5-7)
+## Phase 2: Customer Subscriptions & Orders (Week 5-7) - New Subscription, Order & Trial System
 
-### 2.1 Subscription Plan System
+**Note:** This phase implements the revamped subscription, order, and trial system with per-meal pricing, cycle-based renewals, and paid trials. All new tables use the `bb_` prefix to distinguish from legacy Phase 2 tables.
 
-**Goal**: Define subscription plan templates
+### 2.1 Database Schema Setup (bb_* tables)
 
-**Features**:
+**Goal**: Create new subscription, order, and trial system tables
 
-- Create `plans` table if not in Phase 0
-- Admin can create plan templates:
-  - Name (e.g., "7-Day Lunch", "Monthly Full Board")
-  - Period (weekly/biweekly/monthly)
-  - Meals per day (B/L/D checkboxes)
-  - Base price
-  - Active toggle
-- Plan pricing per vendor (vendor can set own prices later)
+**Tables to create**:
+
+- `bb_platform_settings` - Global platform configuration (delivery fee, commission %, skip cutoff, credit expiry)
+- `bb_zone_pricing` - Zone-specific pricing overrides (future-ready)
+- `bb_vendor_slot_pricing` - Vendor base prices per slot (breakfast/lunch/dinner)
+- `bb_vendor_holidays` - Vendor holiday calendar
+- `bb_plans` - Plan templates (weekly/monthly, allowed slots, skip limits)
+- `bb_subscription_groups` - Customer UX grouping (one per consumer+vendor)
+- `bb_subscriptions` - Per-slot subscriptions (one per consumer+vendor+slot)
+- `bb_cycles` - Billing cycles (weekly Monday-Sunday, monthly 1st-last)
+- `bb_invoices` - Billing invoices (linked to cycles or trials)
+- `bb_invoice_lines` - Per-slot invoice line items with price snapshots
+- `bb_credits` - Skip credits (expire after configurable days)
+- `bb_skips` - Customer skip records
+- `bb_orders` - Meal delivery orders (linked to subscriptions or trials)
+- `bb_trial_types` - Trial product definitions (admin-defined)
+- `bb_vendor_trial_types` - Vendor trial opt-in
+- `bb_trials` - Customer trial instances (one-time, paid, non-renewing)
+- `bb_trial_meals` - Trial meal selections
+
+**Enums to create**:
+- `bb_plan_period_type`: `weekly | monthly`
+- `bb_subscription_status`: `active | paused | cancelled`
+- `bb_invoice_status`: `draft | pending_payment | paid | failed | void`
+- `bb_order_status`: `scheduled | delivered | skipped_by_customer | skipped_by_vendor | failed_ops | customer_no_show | cancelled`
+- `bb_credit_status`: `available | used | expired | void`
+- `bb_trial_status`: `scheduled | active | completed | cancelled`
+- `bb_pricing_mode`: `per_meal | fixed`
 
 **Files**:
+- Migration: `supabase/migrations/XXX_bb_subscription_order_trial_system.sql`
+- RLS policies for all `bb_*` tables
 
-- Migration: Add `plans` table
-- `app/(dashboard)/admin/plans/page.tsx`
+### 2.2 Platform Settings & Vendor Pricing
 
-### 2.2 Customer Subscription Flow
+**Goal**: Admin configures platform settings; vendors set per-slot pricing
 
-**Goal**: Enable customers to subscribe to vendors
+**Admin Features**:
+- `/dashboard/admin/platform-settings` - Edit delivery fee, commission %, skip cutoff hours, credit expiry days
+- `/dashboard/admin/plans-v2` - Create/edit plans (period type, allowed slots, skip limits per slot)
+
+**Vendor Features**:
+- `/dashboard/vendor/settings/pricing` - Set base price per slot (breakfast/lunch/dinner)
+- `/dashboard/vendor/settings/holidays` - Mark holiday dates (whole day or per slot)
+- `/dashboard/vendor/settings/slots` - Configure delivery windows and capacity per slot
+
+**Files**:
+- `app/(dashboard)/admin/platform-settings/page.tsx`
+- `app/(dashboard)/admin/plans-v2/page.tsx`
+- `app/(dashboard)/vendor/settings/pricing/page.tsx`
+- `app/(dashboard)/vendor/settings/holidays/page.tsx`
+- `app/(dashboard)/vendor/settings/slots/page.tsx`
+
+### 2.3 Subscription Creation Flow
+
+**Goal**: Enable customers to subscribe with per-meal pricing and cycle-based billing
 
 **Wizard steps**:
 
 1. **Select Vendor** - From `/vendor/[slug]`, click "Subscribe"
-2. **Choose Plan** - Select meals per day, frequency (trial/weekly/monthly)
-3. **Customize** - Select preferred meal items per slot, delivery days, time window
-4. **Delivery Address** - Confirm/add delivery address
-5. **Payment** - Razorpay integration (3-day trial free, then charge)
-6. **Confirmation** - Show subscription details, start date, renewal date
+2. **Choose Plan** - Select plan type (weekly/monthly)
+3. **Select Slots & Weekdays** - For each slot (B/L/D), select which weekdays
+4. **Start Date** - Select start date (>= tomorrow)
+5. **Review & Pricing Preview**:
+   - First cycle window (start date → first renewal boundary)
+   - Per-slot scheduled meals count (excluding vendor holidays)
+   - First cycle total with breakdown per slot
+   - Next full cycle estimate
+   - Copy: "Renewals happen every Monday / 1st" depending on plan type
+6. **Delivery Address** - Confirm/add delivery address
+7. **Payment** - Razorpay checkout for first cycle
+8. **Confirmation** - Show subscription details, renewal date, schedule calendar
 
-**Tables needed**:
-
-- `subscriptions` - Contract between customer and vendor
-- `subscription_prefs` - Meal customizations
-- `orders` - Daily order instances (generated nightly)
-- `payments` - Payment records
+**Backend RPC Functions**:
+- `bb_preview_subscription_pricing(vendor_id, plan_id, start_date, slot_weekdays_json)` → returns first cycle + next cycle breakdown
+- `bb_create_subscription_checkout(...)` → creates group/subs/cycle/invoice and returns invoice_id + razorpay receipt metadata
 
 **Files**:
-
 - `app/(page)/vendor/[slug]/subscribe/page.tsx`
-- `app/components/customer/SubscriptionWizard.tsx`
-- `lib/payments/razorpay.ts`
+- `app/components/customer/SubscriptionBuilder.tsx` (slot/weekdays/start date)
+- `app/components/customer/FirstCyclePricingSummary.tsx`
+- `lib/subscriptions/subscription-actions.ts` (calls RPCs)
 
-### 2.3 Razorpay Integration
+### 2.4 Trial System
 
-**Goal**: Process customer payments
+**Goal**: Enable paid trial products (separate from subscriptions)
+
+**Admin Features**:
+- `/dashboard/admin/trial-types` - Create/edit trial types:
+  - Duration days, max meals, allowed slots
+  - Pricing mode (per_meal with discount % OR fixed_price)
+  - Cooldown days (prevents repeat trials)
+
+**Vendor Features**:
+- `/dashboard/vendor/trials` - Opt into specific trial types
+
+**Customer Flow**:
+1. Vendor page shows "Start Trial" if eligible (no trial within cooldown)
+2. Choose trial type
+3. Choose start date
+4. Pick meals (date+slot) within window up to max meals
+5. Review price and pay
+6. Trial meals appear in calendar (tagged "Trial")
+
+**Backend RPC Functions**:
+- `bb_create_trial_checkout(...)` → creates trial, trial_meals, invoice
+
+**Files**:
+- `app/(dashboard)/admin/trial-types/page.tsx`
+- `app/(dashboard)/vendor/trials/page.tsx`
+- `app/components/customer/TrialBuilder.tsx`
+- `lib/trials/trial-actions.ts`
+
+### 2.5 Razorpay Integration & Payment Flow
+
+**Goal**: Process subscription and trial payments with proper webhook handling
 
 **Features**:
 
-- Razorpay checkout for subscriptions
+- Razorpay checkout for subscriptions (first cycle) and trials
 - Webhook handler for payment success/failure
-- Create `payments` record on success
-- Activate subscription (`status=active`) after payment
-- Handle auto-renewal for recurring plans
-- Refund handling on subscription cancellation
+- Create `payments` record on success (links to `bb_invoices`)
+- On payment success: call `bb_finalize_invoice_paid(invoice_id, ...)` RPC:
+  - Mark invoice `paid`
+  - Activate subscription (if subscription invoice)
+  - Generate cycle orders (if subscription invoice)
+  - Mark credits `used` (if applied)
+  - Advance `renewal_date`
+- Handle payment retries for failed renewals (+6h, +24h, +48h)
+- Pause subscription if payment retries exhausted
 
 **Files**:
-
 - `app/api/payments/razorpay/webhook/route.ts`
 - `lib/payments/razorpay-client.ts`
+- `lib/payments/payment-retry.ts`
 
-### 2.4 Order Generation System
+### 2.6 Renewal System (Weekly/Monthly)
 
-**Goal**: Auto-generate daily orders from active subscriptions
+**Goal**: Cycle-based renewals with invoice generation and order creation after payment
 
-**Features**:
+**Renewal Jobs**:
+- **Weekly Renewal**: Runs every Monday
+- **Monthly Renewal**: Runs on 1st of each month
 
-- Nightly cron job (Edge Function or Vercel Cron)
-- For each active subscription:
-  - Check subscription prefs (days, slots)
-  - Respect skip/pause flags
-  - Check vendor capacity
-  - Create `orders` row with status `scheduled`
-- Send preparation notification to vendor
-- If capture of proof photos is enabled, store to R2 `tt-private`; serve via presigned GET.
-- Send reminder to customer
+**Renewal Flow** (per group due):
+1. Fetch all active slot subscriptions for (consumer, vendor) where `group.renewal_date = today`
+2. Create next `bb_cycle` for new window
+3. For each subscription (slot):
+   - Count scheduled meals in cycle based on weekdays
+   - Exclude vendor holidays
+4. Apply credits:
+   - Use oldest available credits first
+   - Cap `credits_applied ≤ scheduled_meals`
+5. Compute invoice totals and create `bb_invoice` + `bb_invoice_lines` with price snapshots
+6. Create Razorpay order; notify customer to pay
+7. On payment success: mark invoice `paid`, mark credits `used`, generate cycle orders, advance `group.renewal_date`
+8. On payment failure: mark invoice `failed`; trigger retries; if exhausted, pause subscriptions
+
+**Backend RPC Functions**:
+- `bb_run_renewals(period_type, run_date)` → creates invoices for due groups (idempotent)
+- `bb_finalize_invoice_paid(invoice_id, razorpay_payment_id, razorpay_order_id)` → activates and generates orders (idempotent)
 
 **Files**:
+- `app/api/cron/renew-weekly/route.ts` (or Supabase Edge Function)
+- `app/api/cron/renew-monthly/route.ts` (or Supabase Edge Function)
+- `app/api/cron/payment-retry/route.ts`
+- `lib/renewals/renewal-actions.ts`
 
-- `app/api/cron/generate-orders/route.ts` (or Edge Function)
-- `lib/orders/order-generator.ts`
+### 2.7 Skip & Credit System
 
-### 2.5 Customer Order Management
+**Goal**: Allow customers to skip meals with credited skips within plan limits
 
-**Goal**: Allow customers to manage their orders and subscriptions
+**Skip Rules**:
+- Allowed only before cutoff = (slot earliest delivery start) − platform `skip_cutoff_hours`
+- If within plan limit for slot in current cycle:
+  - Create credit (`bb_credits`)
+  - Increment `credited_skips_used_in_cycle`
+  - Mark order `skipped_by_customer`
+- If beyond limit:
+  - Mark order `skipped_by_customer` (no credit)
+
+**Credit Application**:
+- Credits applied oldest-first during renewal invoice generation
+- Credits expire after `credit_expiry_days` (configurable, default 90)
+- Credits reduce billable meals in future cycles
+
+**Vendor Holiday Credits**:
+- When vendor marks holiday: affected orders marked `skipped_by_vendor`, credits created for impacted subscriptions
+
+**Backend RPC Functions**:
+- `bb_apply_skip(subscription_id, service_date, slot)` → applies cutoff + limit, creates credit if needed, updates order
+
+**Files**:
+- `app/components/customer/SkipDialog.tsx` (with cutoff/credit info)
+- `app/components/customer/CreditsPanel.tsx` (available + expiry)
+- `lib/skips/skip-actions.ts` (calls RPC)
+
+### 2.8 Order Generation System
+
+**Goal**: Generate orders per cycle (not nightly) after invoice payment success
 
 **Features**:
+- Orders generated **only after invoice payment succeeds** (not on renewal day)
+- For each subscription in paid cycle:
+  - Generate `bb_orders` for scheduled dates based on weekdays
+  - Exclude vendor holidays (already credited)
+  - Exclude skipped dates
+- For trial: generate orders for selected `bb_trial_meals`
+- Order status: `scheduled` → `preparing` → `ready` → `picked` → `delivered` | `skipped_by_customer` | `skipped_by_vendor` | `failed_ops` | `customer_no_show` | `cancelled`
 
-- `/dashboard/customer` - Active subscriptions with next delivery date
-- `/dashboard/customer/subscriptions` - All subscriptions (active/paused/cancelled)
-- `/dashboard/customer/orders` - Order history with calendar view
-- Skip meal (before cutoff time)
-- Swap meal items (before cutoff)
-- Change delivery address for specific order
-- Pause/resume subscription
+**Files**:
+- Order generation logic in `bb_finalize_invoice_paid` RPC
+- `lib/orders/order-generator.ts` (helper functions)
+
+### 2.9 Customer Subscription Dashboard
+
+**Goal**: Allow customers to manage subscriptions, view calendar, and track credits
+
+**Features**:
+- `/dashboard/customer/subscriptions-v2` - Grouped view (one card per vendor):
+  - Vendor name, active slots
+  - Next renewal date + estimated charge
+  - This cycle skip remaining per slot
+  - Credits available per slot + nearest expiry
+- `/dashboard/customer/subscriptions-v2/[groupId]` - Detail view:
+  - Calendar view (this + next cycle)
+  - Per-slot schedule with weekdays
+  - Skip action (with cutoff time and credited indicator)
+  - Credits panel
+  - Invoice history
+- `/dashboard/customer/trials` - Active and past trials
+- Pause/resume subscription (effective next renewal)
 - Cancel subscription (with confirmation)
+- Schedule change (apply from next cycle only)
 
 **Files**:
+- `app/(dashboard)/customer/subscriptions-v2/page.tsx`
+- `app/(dashboard)/customer/subscriptions-v2/[groupId]/page.tsx`
+- `app/components/customer/VendorSubscriptionCard.tsx` (grouped)
+- `app/components/customer/SubscriptionCalendar.tsx` (this + next cycle)
+- `app/(dashboard)/customer/trials/page.tsx`
 
-- `app/(dashboard)/customer/subscriptions/page.tsx`
-- `app/(dashboard)/customer/orders/page.tsx`
-- `lib/orders/customer-actions.ts`
+### 2.10 Vendor Order Dashboard
 
-### 2.6 Vendor Order Dashboard
-
-**Goal**: Vendors see their daily prep board
+**Goal**: Vendors see their daily prep board with cycle-based orders
 
 **Features**:
-
-- `/dashboard/vendor` - Today's orders by slot
+- `/dashboard/vendor/orders` - Today's orders by slot
 - Order counts per meal
 - Special notes (Jain, no-onion, etc.)
 - Mark meal as "Ready" (updates order status to `ready`)
 - View upcoming orders (next 7 days)
+- Capacity management per slot
 
 **Files**:
-
 - Update `app/(dashboard)/vendor/page.tsx`
 - `app/(dashboard)/vendor/orders/page.tsx`
+
+### 2.11 Background Jobs
+
+**Goal**: Automated renewal, payment retry, credit expiry, and trial completion
+
+**Jobs to implement**:
+- `renew_weekly` - Runs every Monday (Supabase Scheduled Trigger or Vercel Cron)
+- `renew_monthly` - Runs on 1st (Supabase Scheduled Trigger or Vercel Cron)
+- `payment_retry` - Retries failed renewal payments (+6h, +24h, +48h)
+- `expire_credits` - Marks credits expired after `credit_expiry_days` (daily)
+- `complete_trials` - Marks trials `completed` after `end_date` (daily)
+
+**Idempotency Requirements**:
+- Every job must be safe to re-run without double charging or double crediting
+- Use unique constraints (`cycle per group`, `invoice per cycle`)
+- State machine checks (`invoice.status` transitions)
+- Row-level locks (`FOR UPDATE`) and/or advisory locks per group
+- Deterministic idempotency keys (`group_id + cycle_start`)
+
+**Files**:
+- `app/api/cron/renew-weekly/route.ts`
+- `app/api/cron/renew-monthly/route.ts`
+- `app/api/cron/payment-retry/route.ts`
+- `app/api/cron/expire-credits/route.ts`
+- `app/api/cron/complete-trials/route.ts`
 
 ---
 
@@ -1173,10 +1339,17 @@ Tested and verified:
 
 ### Phase 2 Testing
 
-- Complete subscription flow with Razorpay test mode
-- Verify order generation cron creates correct orders
-- Test skip/pause/cancel subscription flows
-- Verify payment webhooks handle all edge cases
+- Complete subscription flow with per-meal pricing preview and Razorpay test mode
+- Verify cycle-based order generation (after invoice payment success)
+- Test weekly/monthly renewal jobs (idempotency, credit application, invoice creation)
+- Test skip flow (before/after cutoff, within/beyond plan limit, credit creation)
+- Test vendor holiday marking (order adjustment, credit creation)
+- Test trial creation + cooldown enforcement
+- Test payment retry flow (+6h, +24h, +48h) and pause on exhaustion
+- Test credit expiry job
+- Verify payment webhooks handle all edge cases (duplicate webhook idempotency)
+- Test pricing formula correctness (vendor base + delivery fee + commission)
+- Test partial first cycle billing
 
 ### Phase 3 Testing
 
@@ -1200,11 +1373,16 @@ Tested and verified:
 1. **RLS Policies**: Must be bulletproof to prevent cross-tenant data leaks
 2. **Multi-Method Authentication**: Flexible OAuth, Email, and Phone OTP with feature flags (✅ implemented)
 3. **Unified Login UX**: Smooth experience for single and multi-role users with smart redirects (✅ implemented)
-4. **Order Generation**: Must be idempotent and handle capacity constraints
-5. **Payment Handling**: Proper webhook verification and failure handling
-6. **Payout Accuracy**: Transparent calculation with audit trail
-7. **Mobile Performance**: Optimize images, lazy loading, responsive design
-8. **SEO Performance**: Fast load times, proper meta tags, structured data on all public pages
+4. **Per-Meal Pricing Accuracy**: Pricing formula (vendor base + delivery fee + commission) must be correct with price snapshots on invoices
+5. **Cycle-Based Renewals**: Weekly (Monday) and monthly (1st) renewals must be idempotent and handle credit application correctly
+6. **Order Generation**: Must generate orders only after invoice payment success (not on renewal day); must be idempotent
+7. **Payment Handling**: Proper webhook verification, idempotent invoice finalization, payment retry logic, pause on exhaustion
+8. **Skip & Credit System**: Cutoff enforcement, plan limit checks, credit creation/expiry, oldest-first credit application
+9. **Vendor Holiday Handling**: Order adjustment and credit creation for impacted subscriptions
+10. **Trial System**: Cooldown enforcement, one-time paid non-renewing trials
+11. **Payout Accuracy**: Transparent calculation with audit trail
+12. **Mobile Performance**: Optimize images, lazy loading, responsive design
+13. **SEO Performance**: Fast load times, proper meta tags, structured data on all public pages
 
 ---
 
@@ -1256,12 +1434,25 @@ Tested and verified:
 - [ ] Create public vendor discovery pages with filtering and vendor detail views
 - [ ] Build admin vendor approval system with document review and status management
 - [ ] Create admin user and role management interface
-- [ ] Implement subscription plan system with admin plan management
+- [ ] Create `bb_*` database schema (platform settings, plans, subscriptions, cycles, invoices, credits, skips, orders, trials)
+- [ ] Implement platform settings admin UI (delivery fee, commission %, skip cutoff, credit expiry)
+- [ ] Implement admin plan management (weekly/monthly, allowed slots, skip limits per slot)
+- [ ] Implement vendor pricing management (base price per slot, holidays, delivery windows)
+- [ ] Build subscription creation flow with per-meal pricing preview (first cycle + next cycle estimate)
+- [ ] Implement subscription checkout RPC (`bb_create_subscription_checkout`)
+- [ ] Implement pricing preview RPC (`bb_preview_subscription_pricing`)
 - [ ] Integrate Razorpay payment gateway with webhook handlers
-- [ ] Build consumer subscription wizard with meal customization and payment
-- [ ] Create automated order generation system with nightly cron job
-- [ ] Build consumer order management with skip/swap/cancel functionality
-- [ ] Create vendor daily prep dashboard with order tracking
+- [ ] Implement invoice finalization RPC (`bb_finalize_invoice_paid`) - activates subscription, generates orders
+- [ ] Implement weekly renewal job (Mondays) with credit application
+- [ ] Implement monthly renewal job (1st) with credit application
+- [ ] Implement payment retry job (+6h, +24h, +48h) with pause on exhaustion
+- [ ] Implement credit expiry job (daily)
+- [ ] Implement trial completion job (daily)
+- [ ] Build trial system (trial types, vendor opt-in, trial checkout)
+- [ ] Build consumer subscription dashboard (grouped view, calendar, credits panel)
+- [ ] Implement skip flow with cutoff enforcement and credit creation
+- [ ] Build vendor holiday management with automatic credit creation
+- [ ] Create vendor daily prep dashboard with cycle-based order tracking
 - [ ] Implement delivery route generation with zone-based optimization
 - [ ] Build rider route management interface with pickup/delivery flows
 - [ ] Implement OTP-based delivery verification system

@@ -18,6 +18,8 @@ import {
   DollarSign,
   ShieldCheck,
   HelpCircle,
+  Settings,
+  Sparkles,
 } from 'lucide-react'
 
 const vendorMenuItems: MenuItem[] = [
@@ -35,6 +37,16 @@ const vendorMenuItems: MenuItem[] = [
     label: 'Menu',
     href: '/vendor/menu',
     icon: UtensilsCrossed,
+  },
+  {
+    label: 'Trials',
+    href: '/vendor/trials',
+    icon: Sparkles,
+  },
+  {
+    label: 'Settings',
+    href: '/vendor/settings/pricing',
+    icon: Settings,
   },
   {
     label: 'Metrics',

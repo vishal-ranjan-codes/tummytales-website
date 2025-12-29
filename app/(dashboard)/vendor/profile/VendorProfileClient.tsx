@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 import { Save, ExternalLink, MapPin, Loader2, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import type { VendorProfileData } from '@/lib/auth/data-fetchers'
-import type { VendorDeliverySlots, MealSlot, DeliverySlot } from '@/types/subscription'
+import type { VendorDeliverySlots, MealSlot, DeliverySlot } from '@/types/bb-subscription'
 
 interface VendorProfileClientProps {
   initialData: VendorProfileData

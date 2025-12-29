@@ -96,21 +96,39 @@ export default function AdminDashboardClient({
             </p>
           </Link>
 
+          <Link href="/admin/plans" className="box p-6 hover:shadow-lg transition-shadow">
+            <h3 className="text-lg font-semibold theme-fc-heading mb-2">
+              Subscription Plans
+            </h3>
+            <p className="text-sm theme-fc-light">
+              Manage subscription plan templates
+            </p>
+          </Link>
+
+          <Link href="/admin/platform-settings" className="box p-6 hover:shadow-lg transition-shadow">
+            <h3 className="text-lg font-semibold theme-fc-heading mb-2">
+              Platform Settings
+            </h3>
+            <p className="text-sm theme-fc-light">
+              Configure delivery fees, commission, and system settings
+            </p>
+          </Link>
+
+          <Link href="/admin/trial-types" className="box p-6 hover:shadow-lg transition-shadow">
+            <h3 className="text-lg font-semibold theme-fc-heading mb-2">
+              Trial Types
+            </h3>
+            <p className="text-sm theme-fc-light">
+              Manage trial type configurations
+            </p>
+          </Link>
+
           <Link href="/admin/analytics" className="box p-6 hover:shadow-lg transition-shadow">
             <h3 className="text-lg font-semibold theme-fc-heading mb-2">
               Analytics
             </h3>
             <p className="text-sm theme-fc-light">
               View platform analytics and reports
-            </p>
-          </Link>
-
-          <Link href="/admin/settings" className="box p-6 hover:shadow-lg transition-shadow">
-            <h3 className="text-lg font-semibold theme-fc-heading mb-2">
-              Settings
-            </h3>
-            <p className="text-sm theme-fc-light">
-              Configure platform settings
             </p>
           </Link>
 
