@@ -140,7 +140,9 @@ export default function SubscriptionCalendar({
                             <span className="capitalize">{order.slot}</span>
                             {getStatusBadge(order.status)}
                             {skipDisabled && order.status === 'scheduled' && (
-                              <Clock className="w-3 h-3 text-muted-foreground" title="Skip cutoff passed" />
+                              <span title="Skip cutoff passed">
+                                <Clock className="w-3 h-3 text-muted-foreground" />
+                              </span>
                             )}
                           </div>
                           {order.status === 'scheduled' && (
@@ -198,7 +200,9 @@ export default function SubscriptionCalendar({
                             <span className="capitalize">{order.slot}</span>
                             {getStatusBadge(order.status)}
                             {skipDisabled && order.status === 'scheduled' && (
-                              <Clock className="w-3 h-3 text-muted-foreground" title="Skip cutoff passed" />
+                              <span title="Skip cutoff passed">
+                                <Clock className="w-3 h-3 text-muted-foreground" />
+                              </span>
                             )}
                           </div>
                           {order.status === 'scheduled' && (

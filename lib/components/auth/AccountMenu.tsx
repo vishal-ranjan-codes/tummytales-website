@@ -26,17 +26,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { 
-  Settings, 
-  LayoutDashboard, 
-  ShoppingBag, 
-  ChefHat, 
-  Truck, 
-  Users, 
+import {
+  Settings,
+  LayoutDashboard,
+  ShoppingBag,
+  ChefHat,
+  Truck,
+  Users,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Shield,
+  Briefcase,
+  Code,
+  Headset
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getDashboardPath } from '@/lib/auth/role-types'
 
 interface AccountMenuProps {
   variant?: 'desktop' | 'mobile'
@@ -44,18 +49,26 @@ interface AccountMenuProps {
   initialUser?: { id: string | null; email: string | null }
 }
 
-const roleIcons: Record<UserRole, React.ElementType> = {
+const roleIcons: Record<string, React.ElementType> = {
   customer: ShoppingBag,
   vendor: ChefHat,
   rider: Truck,
   admin: Users,
+  super_admin: Shield,
+  product_manager: Briefcase,
+  developer: Code,
+  operations: Headset,
 }
 
-const roleDashboards: Record<UserRole, string> = {
+const roleDashboards: Record<string, string> = {
   customer: '/customer',
   vendor: '/vendor',
   rider: '/rider',
   admin: '/admin',
+  super_admin: '/admin',
+  product_manager: '/admin',
+  developer: '/admin',
+  operations: '/admin',
 }
 
 type MenuItem = { label: string; icon: React.ElementType; href: string }
@@ -66,13 +79,13 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
   const user = ctxUser ?? (initialUser ? { id: initialUser.id, email: initialUser.email, user_metadata: (initialUser as { user_metadata?: Record<string, unknown> })?.user_metadata } as { id: string | null; email: string | null; user_metadata?: Record<string, unknown> } | null : null)
   const currentRole = (ctxRole ?? initialProfile?.currentRole ?? null) as UserRole | null
   const displayFullName = (ctxProfile?.full_name || initialProfile?.full_name || user?.email || 'User') as string
-  
+
   // Get photo URL with fallback to user metadata (for Google Auth)
   const getPhotoUrl = () => {
     // First try profile photo_url
     if (ctxProfile?.photo_url) return ctxProfile.photo_url
     if (initialProfile?.photo_url) return initialProfile.photo_url
-    
+
     // Fallback to user metadata (Google Auth stores it here)
     // Check ctxUser first (client-side auth context)
     if (ctxUser?.user_metadata) {
@@ -88,11 +101,11 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
         return (metadata as Record<string, unknown>).avatar_url as string | undefined || (metadata as Record<string, unknown>).picture as string | undefined || null
       }
     }
-    
+
     return null
   }
   const displayPhoto = getPhotoUrl()
-  
+
   const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -101,7 +114,7 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
   if (isReady && !ctxUser && !initialUser) {
     return null
   }
-  
+
   // If no user at all (neither client nor initial), don't render
   if (!user && !initialUser) {
     return null
@@ -109,7 +122,7 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
 
   const handleSignOut = async () => {
     if (isSigningOut) return // Prevent multiple clicks
-    
+
     try {
       await signOut()
       toast.success('Signed out successfully!')
@@ -179,10 +192,11 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
           href: '/rider/orders',
         },
       ],
-      admin: [
-        // Admin Panel is already included in baseItems as "Dashboard" with href '/admin'
-        // No additional admin-specific items needed
-      ],
+      admin: [],
+      super_admin: [],
+      product_manager: [],
+      developer: [],
+      operations: [],
     }
 
     return [...baseItems, ...(roleSpecificItems[currentRole as UserRole] || [])]
@@ -209,6 +223,7 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
           size="sm"
           onClick={() => setIsMobileMenuOpen(true)}
           className="flex items-center gap-2 p-2"
+          suppressHydrationWarning
         >
           <Avatar className="w-8 h-8">
             {displayPhoto && <AvatarImage src={displayPhoto} alt={displayFullName} />}
@@ -265,17 +280,16 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
                       {(roles as UserRole[]).map((role: UserRole) => {
                         const Icon = roleIcons[role]
                         const isActive = role === currentRole
-                        
+
                         return (
                           <Link
                             key={role}
                             href={roleDashboards[role]}
                             onClick={() => setIsMobileMenuOpen(false)}
-                            className={`flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors cursor-pointer ${
-                              isActive 
-                                ? 'bg-primary/10 text-primary' 
-                                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                            }`}
+                            className={`flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors cursor-pointer ${isActive
+                              ? 'bg-primary/10 text-primary'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                              }`}
                           >
                             <Icon className="w-4 h-4" />
                             <span>{getRoleDisplayName(role)}</span>
@@ -311,7 +325,11 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="flex items-center gap-2 p-2">
+        <Button
+          variant="ghost"
+          className="flex items-center gap-2 p-2"
+          suppressHydrationWarning
+        >
           <Avatar className="w-8 h-8">
             {displayPhoto && <AvatarImage src={displayPhoto} alt={displayFullName} />}
             <AvatarFallback className="text-xs font-medium">
@@ -331,7 +349,7 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        
+
         {/* Menu Items */}
         {menuItems.map((item, index) => (
           <DropdownMenuItem key={`${item.href}-${item.label}-${index}`} asChild>
@@ -340,7 +358,7 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
         ))}
 
         {/* Role Switcher */}
-            {(roles as UserRole[]).length > 1 && (
+        {(roles as UserRole[]).length > 1 && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -349,7 +367,7 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
             {(roles as UserRole[]).map((role: UserRole) => {
               const Icon = roleIcons[role]
               const isActive = role === currentRole
-              
+
               return (
                 <DropdownMenuItem key={role} asChild disabled={isActive}>
                   <Link
@@ -367,8 +385,8 @@ export default function AccountMenu({ variant = 'desktop', initialProfile, initi
         )}
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem 
-          onClick={handleSignOut} 
+        <DropdownMenuItem
+          onClick={handleSignOut}
           disabled={isSigningOut}
           className="text-red-600 focus:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >

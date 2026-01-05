@@ -150,12 +150,22 @@ export async function getPausePreview(
     }
 
     // Count orders that would be cancelled and credited
+    // First, get subscription IDs for this group
+    const { data: subscriptions, error: subsError } = await supabase
+      .from('bb_subscriptions')
+      .select('id')
+      .eq('group_id', groupId)
+
+    if (subsError) {
+      return { success: false, error: 'Failed to fetch subscriptions' }
+    }
+
+    const subscriptionIds = (subscriptions || []).map(s => s.id)
+    
     const { data: orders, error: ordersError } = await supabase
       .from('bb_orders')
       .select('id, service_date, subscription_id')
-      .in('subscription_id', 
-        supabase.from('bb_subscriptions').select('id').eq('group_id', groupId)
-      )
+      .in('subscription_id', subscriptionIds)
       .eq('status', 'scheduled')
       .gte('service_date', pauseDate)
       .lte('service_date', cycle.cycle_end)
@@ -235,12 +245,18 @@ export async function getResumePreview(
     }
 
     // Count available pause credits
+    // Get subscription IDs for this group
+    const { data: subsForCredits } = await supabase
+      .from('bb_subscriptions')
+      .select('id')
+      .eq('group_id', groupId)
+    
+    const subscriptionIdsForCredits = (subsForCredits || []).map(s => s.id)
+    
     const { count: creditsCount } = await supabase
       .from('bb_credits')
       .select('id', { count: 'exact', head: true })
-      .in('subscription_id',
-        supabase.from('bb_subscriptions').select('id').eq('group_id', groupId)
-      )
+      .in('subscription_id', subscriptionIdsForCredits)
       .eq('status', 'available')
       .eq('reason', 'pause_mid_cycle')
 

@@ -170,12 +170,12 @@ export async function executeCreditExpiryJob(): Promise<CreditExpiryJobResult> {
       expiryByReason,
     }
 
-    await completeJob(job.id, result)
+    await completeJob(job.id, result as unknown as Record<string, unknown>)
     await logJob({
       jobId: job.id,
       level: 'info',
       message: `Credit expiry job completed: ${processed} processed, ${expired} expired, ${errors} errors`,
-      metadata: result,
+      metadata: result as unknown as Record<string, unknown>,
     })
 
     return result

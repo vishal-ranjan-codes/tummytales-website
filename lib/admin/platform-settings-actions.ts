@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type {
   BBPlatformSettings,
+  ExtendedBBPlatformSettings,
   UpdateBBPlatformSettingsInput,
 } from '@/types/bb-subscription'
 
@@ -48,7 +49,7 @@ async function verifyAdmin(): Promise<{ success: boolean; error?: string }> {
  * Get platform settings
  */
 export async function getPlatformSettings(): Promise<
-  ActionResponse<BBPlatformSettings>
+  ActionResponse<ExtendedBBPlatformSettings>
 > {
   try {
     const adminCheck = await verifyAdmin()
@@ -71,7 +72,7 @@ export async function getPlatformSettings(): Promise<
       }
     }
 
-    return { success: true, data: settings as BBPlatformSettings }
+    return { success: true, data: settings as ExtendedBBPlatformSettings }
   } catch (error: unknown) {
     console.error('Unexpected error fetching platform settings:', error)
     return { success: false, error: 'An unexpected error occurred' }

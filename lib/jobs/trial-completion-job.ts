@@ -170,12 +170,12 @@ export async function executeTrialCompletionJob(): Promise<TrialCompletionJobRes
       completedByVendor,
     }
 
-    await completeJob(job.id, result)
+    await completeJob(job.id, result as unknown as Record<string, unknown>)
     await logJob({
       jobId: job.id,
       level: 'info',
       message: `Trial completion job completed: ${processed} processed, ${completed} completed, ${errors} errors`,
-      metadata: result,
+      metadata: result as unknown as Record<string, unknown>,
     })
 
     return result

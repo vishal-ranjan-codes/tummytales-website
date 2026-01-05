@@ -10,14 +10,16 @@
 export type InitialAuth =
   | { isAuthenticated: false }
   | {
-      isAuthenticated: true
-      user: { id: string | null; email: string | null; user_metadata?: Record<string, unknown> }
-      profile: {
-        id: string
-        full_name: string
-        photo_url: string | null
-        roles: string[]
-        currentRole: string | null
-      } | null
-    }
+    isAuthenticated: true
+    user: { id: string | null; email: string | null; user_metadata?: Record<string, unknown> }
+    profile: {
+      id: string
+      full_name: string
+      photo_url: string | null
+      roles: string[]
+      role?: string | null
+      is_super_admin?: boolean
+      currentRole: string | null
+    } | null
+  }
 

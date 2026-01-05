@@ -101,16 +101,27 @@ export default function CustomerOrdersClient({
   }
 
   const handleExport = () => {
-    const exportableOrders = filteredOrders.map((order) => ({
-      id: order.id,
-      service_date: order.service_date,
-      slot: order.slot,
-      status: order.status,
-      vendor_name: order.vendor?.display_name || '',
-      meal_name: '', // Orders don't have meal names in current structure
-      delivery_address: order.delivery_address || '',
-      created_at: order.created_at,
-    }))
+    const exportableOrders = filteredOrders.map((order) => {
+      // Convert delivery_address to string if it's an object
+      let deliveryAddress = ''
+      if (typeof order.delivery_address === 'string') {
+        deliveryAddress = order.delivery_address
+      } else if (order.delivery_address && typeof order.delivery_address === 'object') {
+        const addr = order.delivery_address
+        deliveryAddress = `${addr.line1}${addr.line2 ? ', ' + addr.line2 : ''}, ${addr.city}, ${addr.state} ${addr.pincode}`
+      }
+      
+      return {
+        id: order.id,
+        service_date: order.service_date,
+        slot: order.slot,
+        status: order.status,
+        vendor_name: order.vendor?.display_name || '',
+        meal_name: '', // Orders don't have meal names in current structure
+        delivery_address: deliveryAddress,
+        created_at: order.created_at,
+      }
+    })
 
     const csvContent = exportOrdersToCSV(exportableOrders)
     const filename = `orders_${new Date().toISOString().split('T')[0]}.csv`

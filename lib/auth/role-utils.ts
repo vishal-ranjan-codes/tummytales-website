@@ -7,11 +7,11 @@ import { createClient } from '@/lib/supabase/server'
 
 // Re-export types and client-safe utilities
 export type { UserRole, UserProfile } from './role-types'
-export { 
-  getRoleDisplayName, 
-  getRoleColor, 
-  getDashboardPath, 
-  isValidRole 
+export {
+  getRoleDisplayName,
+  getRoleColor,
+  getDashboardPath,
+  isValidRole
 } from './role-types'
 
 import type { UserRole, UserProfile } from './role-types'
@@ -23,7 +23,7 @@ import type { UserRole, UserProfile } from './role-types'
  */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -50,12 +50,21 @@ export async function hasRole(userId: string, role: UserRole): Promise<boolean> 
 }
 
 /**
- * Check if user is admin
+ * Check if user is admin or super admin
  * @param userId - User ID
  * @returns boolean
  */
 export async function isAdmin(userId: string): Promise<boolean> {
-  return await hasRole(userId, 'admin')
+  const profile = await getUserProfile(userId)
+  if (!profile) return false
+
+  return (
+    profile.roles.includes('admin') ||
+    profile.roles.includes('super_admin') ||
+    profile.is_super_admin === true ||
+    profile.role === 'admin' ||
+    profile.role === 'super_admin'
+  )
 }
 
 /**

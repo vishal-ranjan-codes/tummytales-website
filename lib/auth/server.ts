@@ -20,7 +20,7 @@ import { getUserProfile } from './role-utils'
  */
 export async function getAuth(): Promise<InitialAuth> {
   const supabase = await createClient()
-  
+
   try {
     const {
       data: { user },
@@ -33,7 +33,7 @@ export async function getAuth(): Promise<InitialAuth> {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, photo_url, roles, default_role, last_used_role')
+      .select('id, full_name, photo_url, roles, role, is_super_admin, default_role, last_used_role')
       .eq('id', user.id)
       .single()
 
@@ -48,6 +48,13 @@ export async function getAuth(): Promise<InitialAuth> {
       }
     }
 
+    // Determine current role based on new system primarily, fallback to legacy
+    const currentRole =
+      profile.role ||
+      (profile.last_used_role as string | null) ||
+      (profile.default_role as string | null) ||
+      ((profile.roles as string[] | null)?.[0] ?? null);
+
     return {
       isAuthenticated: true,
       user: { id: user.id, email: user.email ?? null, user_metadata: user.user_metadata },
@@ -56,10 +63,9 @@ export async function getAuth(): Promise<InitialAuth> {
         full_name: profile.full_name,
         photo_url: profile.photo_url,
         roles: (profile.roles as string[]) ?? [],
-        currentRole:
-          (profile.last_used_role as string | null) ||
-          (profile.default_role as string | null) ||
-          ((profile.roles as string[] | null)?.[0] ?? null),
+        role: profile.role,
+        is_super_admin: profile.is_super_admin,
+        currentRole: currentRole,
       },
     }
   } catch (error) {

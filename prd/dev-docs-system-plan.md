@@ -1,623 +1,203 @@
-# Development Documentation System - Implementation Plan
+# BellyBox Dev Hub - Implementation Plan
 
 ## Document Control
 - **Product**: BellyBox
-- **Feature**: Development Documentation System with Workflow Management
-- **Route**: `/dev-docs` (Admin-only access)
+- **Feature**: BellyBox Dev Hub (Documentation & Development Management System)
+- **Route**: `/dev-docs` (Admin/Developer access)
 - **Status**: Planning
-- **Created**: 2025-01-XX
+- **Last Updated**: 2025-12-30
 
 ---
 
-## 1. Overview
+## 1. Vision & Purpose
 
-### 1.1 Purpose
-Create a comprehensive development documentation system that allows admins to view, edit, and manage documentation with advanced workflow features including drafts, approvals, version history, and comments.
+The **BellyBox Dev Hub** is the central nervous system for the development team. It is not just a documentation viewer, but a **development management platform** that allows the team to:
 
-### 1.2 Core Principles
-- **Markdown files as source of truth**: All documentation stored as `.md` files in `documentation/` folder
-- **Database for workflow**: Metadata, drafts, versions, and comments stored in database
-- **Two-way sync**: Approved drafts write to markdown files; file changes tracked in database
-- **Admin-only access**: All features accessible only to users with `admin` role
+1.  **Plan & Track**: Visualize the development roadmap and progress directly from documentation files.
+2.  **Collaborate**: Propose changes to specifications and discuss implementation details.
+3.  **Manage Tasks**: Aggregate and track granular tasks scattered across documentation.
+4.  **Maintain Truth**: Keep the `documentation/` folder as the single source of truth for all system logic and rules.
 
-### 1.3 Key Features
-1. **Documentation Viewer**: Browse and read all documentation files
-2. **Live Editing**: Edit documents directly in the UI
-3. **Draft System**: Create drafts without modifying source files
-4. **Approval Workflow**: Submit drafts for review and approval
-5. **Version History**: Track all changes with ability to view diffs and rollback
-6. **Comments**: Add inline and general comments on documents
-7. **Search**: Full-text search across all documentation
-8. **Navigation**: Tree view sidebar with categories and documents
+### Core Philosophy
+- **Files are King**: The `.md` files in `documentation/` are the absolute source of truth.
+- **Database as Overlay**: The database is used only for ephemeral data (proposals, comments) and does not replace the file system.
+- **Metadata Driven**: Development status and ownership are tracked via YAML frontmatter in the documentation files themselves.
 
 ---
 
-## 2. Architecture
+## 2. Key Features
 
-### 2.1 File Structure
-```
-documentation/                    # Root folder (source of truth)
-├── README.md
-├── 01-introduction/
-│   ├── overview.md
-│   └── ...
-├── 03-subscription-system/
-│   ├── overview.md
-│   └── ...
-└── ... (all other folders)
+### 2.1 🧠 Knowledge Base (The Viewer)
+- Browse the hierarchical `documentation/` folder structure.
+- Clean, readable rendering of Markdown with syntax highlighting.
+- Support for diagrams (Mermaid) and tables.
+- **Goal**: Make system logic accessible to everyone.
 
-# Only .md files, no config or JSON files
-```
+### 2.2 🚀 Mission Control (The Dashboard)
+- Visual high-level dashboard powered by file Frontmatter.
+- **Kanban View**: Group docs by status (`Planned`, `In Development`, `Complete`).
+- **Progress Bars**: Visualize `% Complete` from metadata.
+- **Workload View**: See who is working on what (grouped by `owner`).
 
-### 2.2 Database Schema
+### 2.3 ✍️ Proposal System (Simple Approval Workflow)
+- Developers can edit documents in the UI and "Submit Proposal".
+- **Diff View**: Leads see a Before/After comparison of the changes.
+- **Approval Action**: Approving a proposal writes the changes directly to the `.md` file on disk.
+- **Reject/Discussion**: Leads can comment or reject proposals.
 
-#### 2.2.1 Core Tables
+### 2.4 ✅ Task Aggregator
+- Scans all documentation files for Markdown checkboxes (`- [ ]`).
+- Aggregates them into a single "Master Task List".
+- Filter by file, feature, or status.
+- Interactive: Checking a box in the UI updates the physical file.
 
-**`documentation_pages`**
-- Stores metadata for each documentation page
-- Links to file path in `documentation/` folder
-- Tracks status: `draft`, `pending_review`, `published`, `archived`
-- Stores version number, content hash, and publication info
-- Unique constraint on `file_path` and `(category, slug)`
+### 2.5 💬 Contextual Collaboration
+- Threaded comments sidebar for each document.
+- Discuss requirements *before* implementation.
+- Resolve threads when decisions are made.
 
-**`documentation_versions`**
-- Version history snapshots
-- Stores content hash and optional content snapshot
-- Links to page and user who made changes
-- Includes change summary for each version
-- Unique constraint on `(page_id, version)`
+---
 
-**`documentation_drafts`**
-- Draft content separate from published files
-- Status: `draft` or `pending_approval`
-- Stores full markdown content
-- Tracks creator and approver
-- Links to parent page
+## 3. Architecture
 
-**`documentation_comments`**
-- Comments on published pages or drafts
-- Optional line number for inline comments
-- Threaded discussions with resolve status
-- Links to page or draft
+### 3.1 File Structure Strategy
+The system reads from the `documentation/` root folder. All documentation files must use YAML frontmatter for the tracking features to work.
 
-#### 2.2.2 Relationships
-- `documentation_pages` → `documentation_versions` (one-to-many)
-- `documentation_pages` → `documentation_drafts` (one-to-many, only one active)
-- `documentation_pages` → `documentation_comments` (one-to-many)
-- All tables reference `profiles(id)` for user tracking
-
-### 2.3 Route Structure
-```
-/dev-docs                          # Landing page with category list
-/dev-docs/[category]               # Category listing page
-/dev-docs/[category]/[slug]       # View published document
-/dev-docs/[category]/[slug]/edit  # Edit mode (creates draft)
-/dev-docs/[category]/[slug]/history # Version history view
-/dev-docs/admin                    # Admin management panel
-  - Drafts queue
-  - Pending approvals
-  - All pages overview
+**Standard Frontmatter Schema:**
+```yaml
+---
+title: "Subscription System V2"
+type: "system-spec"     # system-spec, feature, guide, api
+status: "in-progress"   # planned, in-progress, in-review, complete, on-hold
+owner: "@rohit"
+priority: "high"        # critical, high, medium, low
+progress: 45            # 0-100 percentage
+---
 ```
 
-### 2.4 Access Control
-- Middleware checks for `admin` role on all `/dev-docs/*` routes
-- Redirects non-admin users to their default dashboard
-- RLS policies ensure users can only see their own drafts/comments
-- Admin can see all drafts and pending approvals
+### 3.2 Database Schema (Supabase)
+
+We need a few simple tables to handle the "Overlay" features.
+
+**`dev_doc_proposals`**
+- `id` (uuid)
+- `file_path` (text) - relative path in documentation folder
+- `original_content_hash` (text) - to detect conflicts
+- `proposed_content` (text)
+- `author_id` (uuid) -> profiles.id
+- `status` (enum): `pending`, `approved`, `rejected`
+- `created_at` (timestamp)
+
+**`dev_doc_comments`**
+- `id` (uuid)
+- `file_path` (text)
+- `content` (text)
+- `author_id` (uuid)
+- `parent_id` (uuid, nullable) - for threading
+- `is_resolved` (boolean)
+- `created_at` (timestamp)
+
+*Note: No "Versions" table. We rely on Git for history.*
+
+### 3.4 Roles & Permissions Architecture
+We align with the BellyBox Tiered RBAC system. Permissions are additive across a user's role array.
+
+| Role | Dev Hub Capability | Type |
+| :--- | :--- | :--- |
+| **Super Admin** | **Approver/Lead** | Universal read/write. Can Approve any proposal. |
+| **Admin** | **Proposer** | Read/View + Propose changes. Cannot approve. |
+| **Product Manager** | **Proposer** | Read/View + Propose changes. Cannot approve. |
+| **Developer** | **Proposer** | Read/View + Propose changes. Cannot approve. |
+| **Operations** | **Proposer** | Read/View + Propose changes. Cannot approve. |
+
+**The "Strict Approval" Workflow:**
+1. **Proposal Phase**: Any internal role (except base roles) edits a doc and submits a "Proposal".
+2. **Review Phase**: Proposal enters `pending` status. Discussion via comments.
+3. **Approval Phase**: **Strictly limited to Super Admin.** Approval triggers the filesystem write to the `.md` file.
+4. **Direct Edit**: Super Admin can bypass the proposal system for immediate fixes.
+
+**Status Flow:**
+`Draft` (Editing) → `Pending Approval` (Proposed) → `Approved` (Merged to File) OR `Rejected`.
 
 ---
 
-## 3. Implementation Phases
+## 4. Implementation Zones
 
-### Phase 1: Foundation & File Reading (Week 1)
+### Phase 1: The Foundation (Viewer + Metadata)
+**Goal**: Read-only viewer that visualizes the project status.
 
-#### 3.1.1 Setup
-1. Create database migration for core tables
-2. Install markdown rendering libraries: `react-markdown`, `remark-gfm`, `rehype-highlight`
-3. Create route structure: `/dev-docs` with middleware protection
-4. Build file system utilities to read from `documentation/` folder
+1.  **File System Integration**: 
+    - Server functions to recursively read `documentation/`.
+    - `gray-matter` for parsing frontmatter.
+2.  **Sidebar Navigation**: Auto-generate tree from folder structure.
+3.  **Mission Control Dashboard**: 
+    - Compute aggregates (e.g., "7 Docs In Progress").
+    - Render status badges and progress bars.
+4.  **Document Renderer**: `react-markdown` viewer with customized typography.
 
-#### 3.1.2 File Scanner
-- Create utility function to scan `documentation/` folder recursively
-- Parse markdown frontmatter (title, description, category)
-- Extract file metadata: path, size, last modified
-- Build hierarchical structure (categories → files)
+### Phase 2: The Proposal Engine
+**Goal**: Allow editing and approval flow.
 
-#### 3.1.3 Basic Viewer
-- Server component reads markdown file
-- Client component renders with `react-markdown`
-- Add syntax highlighting for code blocks
-- Generate table of contents from headings
-- Implement breadcrumb navigation
+1.  **Proposal UI**:
+    - "Edit" button opens Monaco Editor/Textarea.
+    - Save action creates entry in `dev_doc_proposals`.
+2.  **Review Dashboard**:
+    - List all pending proposals.
+    - **Diff Viewer**: Use `diff` library to show added/removed lines.
+3.  **Approval Logic**:
+    - Server Action: `approveProposal(id)`.
+    - Reads `proposed_content` from DB -> Writes to File System (`fs.writeFile`).
+    - Updates proposal status to `approved`.
 
-#### 3.1.4 Navigation Sidebar
-- Tree view of all categories and documents
-- Collapsible sections
-- Active document highlighting
-- Search input for quick navigation
+### Phase 3: RBAC (Roles & Permissions)
+**Goal**: Secure the workflow and distinguish between Contributors and Approvers.
 
-**Deliverables:**
-- Database schema migration
-- File reading utilities
-- Basic documentation viewer
-- Navigation sidebar
-- Admin route protection
+1.  **Role Definition**:
+    - Add `roles` column (`text[]`) to `profiles` table.
+    - Seed initial Admin user.
+2.  **Permission Enforcement**:
+    - Update `approveProposal` action to strictly check for `admin` role.
+    - Update UI to hide/disable "Approve" buttons for non-admins.
+3.  **User Management**:
+    - Simple Admin page to assign `developer` or `admin` roles to users.
+4.  **Middleware**:
+    - Protect `/dev-docs` routes to ensure user has at least `developer` access.
 
----
+### Phase 4: Task & Collaboration
+**Goal**: Detailed tracking and discussion.
 
-### Phase 2: Database Sync & Metadata (Week 1-2)
-
-#### 3.2.1 Initial Sync
-- Create sync job/function to scan `documentation/` folder
-- Populate `documentation_pages` table with file metadata
-- Calculate content hash (SHA-256) for each file
-- Set initial status as `published` for existing files
-- Handle new files, deleted files, and modified files
-
-#### 3.2.2 Sync Mechanism
-- Manual sync button in admin panel
-- Automatic sync on file system changes (optional: file watcher)
-- Compare file hashes to detect changes
-- Update database when files change externally
-- Create version entry when published file changes
-
-#### 3.2.3 Status Management
-- Track file status in database
-- Show status badges in UI (Published, Draft, Pending Review)
-- Filter documents by status in admin panel
-- Handle status transitions with validation
-
-**Deliverables:**
-- Sync utility functions
-- Database population script
-- Status management UI
-- Change detection logic
+1.  **Task Scanner**:
+    - Regex parse `/- \[[ x]\] (.*)/g` across all files.
+    - Build virtual list of tasks linked to their source files.
+    - Action: Toggle checkbox -> updates file content.
+2.  **Comments System**:
+    - Real-time (or near real-time) comments sidebar.
+    - Linked to `file_path`.
 
 ---
 
-### Phase 3: Live Editing & Drafts (Week 2)
+## 5. Technical Stack
 
-#### 3.3.1 Editor Component
-- Rich markdown editor (use `react-markdown` with edit mode or `@uiw/react-md-editor`)
-- Live preview pane (split view: editor | preview)
-- Syntax highlighting in editor
-- Auto-save draft to database every 30 seconds
-- Show "Unsaved changes" indicator
-
-#### 3.3.2 Draft Creation
-- "Edit" button on published pages creates draft
-- Draft stored in `documentation_drafts` table
-- Link draft to parent page
-- Status set to `draft` initially
-- Creator tracked in database
-
-#### 3.3.3 Draft Management
-- List all drafts in admin panel
-- Show draft status and creator
-- Continue editing existing drafts
-- Delete drafts
-- Compare draft vs published version (diff view)
-
-#### 3.3.4 Draft Submission
-- "Submit for Review" button on draft
-- Changes status to `pending_approval`
-- Notifies admins (optional: email/notification)
-- Shows in "Pending Approvals" queue
-
-**Deliverables:**
-- Markdown editor component
-- Draft creation and management
-- Auto-save functionality
-- Draft submission workflow
+- **Framework**: Next.js 15 (Server Actions strongly used here).
+- **Styling**: Tailwind CSS + Shadcn UI.
+- **Backend**: Supabase (Postgres) for Proposals/Comments.
+- **File Ops**: Node.js `fs/promises`.
+- **Markdown**: `react-markdown`, `gray-matter`, `remark-gfm`.
+- **Diffing**: `diff` package for text comparison.
 
 ---
 
-### Phase 4: Approval Workflow (Week 2-3)
+## 6. Security & Safety
 
-#### 3.4.1 Approval Queue
-- Admin panel shows all `pending_approval` drafts
-- List view with: document title, creator, created date, changes summary
-- Click to view draft with diff against published version
-- Side-by-side comparison view
-
-#### 3.4.2 Approval Actions
-- **Approve**: Writes draft content to markdown file, updates database, creates version entry
-- **Reject**: Returns draft to creator with optional comment, status back to `draft`
-- **Request Changes**: Adds comment, keeps status `pending_approval`
-
-#### 3.4.3 Publish Process
-When draft is approved:
-1. Read current file content (if exists)
-2. Create version snapshot in `documentation_versions` table
-3. Write draft content to markdown file at correct path
-4. Update `documentation_pages` with new hash and version number
-5. Set status to `published`
-6. Update `published_at` and `published_by` fields
-7. Archive or delete the draft
-
-#### 3.4.4 File Writing Safety
-- Validate file path to prevent directory traversal
-- Ensure path is within `documentation/` folder
-- Create parent directories if they don't exist
-- Backup original file before overwriting (optional)
-- Handle write errors gracefully
-
-**Deliverables:**
-- Approval queue UI
-- Diff comparison view
-- Approve/reject/reject with changes actions
-- File writing utilities with safety checks
-- Version snapshot creation
+1.  **Path Traversal Protection**: Ensure all file operations are strictly scoped to `process.cwd() + '/documentation'`.
+2.  **Auth**: Middleware Protection. Only users with role `admin` or specific `developer` permission can access `/dev-docs`.
+3.  **Conflict Detection**: Before applying a proposal, check if the file on disk has changed since the proposal was created (using hash comparison).
 
 ---
 
-### Phase 5: Version History (Week 3)
-
-#### 3.5.1 Version Tracking
-- On file write (approval), create entry in `documentation_versions`
-- Store content hash and optional full content snapshot
-- Track version number (auto-increment)
-- Store change summary (auto-generated or manual)
-- Link to user who made change
-
-#### 3.5.2 Version View
-- "History" button on document pages
-- List all versions with: version number, date, author, summary
-- Click version to view that version's content
-- Show version metadata
-
-#### 3.5.3 Diff View
-- Compare any two versions side-by-side
-- Highlight additions (green) and deletions (red)
-- Show line-by-line changes
-- Use library like `react-diff-view` or `diff2html`
-
-#### 3.5.4 Rollback
-- "Restore this version" button on old versions
-- Creates new draft with old version's content
-- Goes through normal approval workflow
-- Prevents direct file modification (maintains audit trail)
-
-**Deliverables:**
-- Version history UI
-- Version comparison/diff view
-- Rollback functionality
-- Version metadata display
-
----
-
-### Phase 6: Comments System (Week 3-4)
-
-#### 3.6.1 Comment Types
-- **General comments**: On entire document (no line number)
-- **Inline comments**: On specific line (line_number stored)
-- **Threaded replies**: Comments can have replies
-- **Resolved status**: Mark comments as resolved
-
-#### 3.6.2 Comment UI
-- Comment icon/button on document pages
-- Click line number to add inline comment
-- Comment panel/sidebar
-- Show comments with author, timestamp, content
-- Highlight lines with comments
-- Resolve/unresolve toggle
-
-#### 3.6.3 Comment Management
-- Add, edit, delete own comments
-- Admin can delete any comment
-- Filter by resolved/unresolved
-- Show comment count badge
-- Notification when someone comments (optional)
-
-#### 3.6.4 Draft Comments
-- Comments can be added to drafts
-- Shown in approval queue
-- Help reviewers provide feedback
-- Resolved when addressed in new draft
-
-**Deliverables:**
-- Comment creation UI
-- Inline comment support
-- Comment thread display
-- Comment management (edit, delete, resolve)
-
----
-
-### Phase 7: Search & Enhancements (Week 4)
-
-#### 3.7.1 Full-Text Search
-- Search input in header/navbar
-- Search across all markdown content
-- Search in titles, descriptions, and body
-- Highlight search results
-- Show search result snippets
-- Filter by category
-
-#### 3.7.2 Advanced Features
-- **Export**: Download document as PDF or HTML
-- **Print**: Print-friendly view
-- **Share**: Generate shareable link (admin-only)
-- **Bookmarks**: Save frequently accessed docs (optional)
-- **Recent**: Show recently viewed documents
-
-#### 3.7.3 Performance Optimization
-- Cache rendered markdown
-- Lazy load document content
-- Optimize file reading (batch operations)
-- Index search content (optional: use full-text search in database)
-
-#### 3.7.4 Mobile Responsiveness
-- Responsive sidebar (collapsible on mobile)
-- Mobile-friendly editor
-- Touch-optimized interactions
-- Bottom navigation for mobile
-
-**Deliverables:**
-- Full-text search functionality
-- Export/print features
-- Performance optimizations
-- Mobile-responsive design
-
----
-
-## 4. Technical Implementation Details
-
-### 4.1 File System Operations
-
-**Reading Files:**
-- Use Node.js `fs/promises` in server components
-- Path: `join(process.cwd(), 'documentation', ...)`
-- Handle file not found errors gracefully
-- Cache file metadata to reduce I/O
-
-**Writing Files:**
-- Only on draft approval
-- Validate path is within `documentation/` folder
-- Use `writeFile` with UTF-8 encoding
-- Create parent directories if needed with `mkdir` recursive
-
-**File Watching (Optional):**
-- Use `chokidar` or `fs.watch` to detect external file changes
-- Trigger sync when files modified outside UI
-- Debounce sync operations to avoid excessive updates
-
-### 4.2 Markdown Processing
-
-**Rendering:**
-- `react-markdown` for rendering
-- `remark-gfm` for GitHub Flavored Markdown (tables, strikethrough, etc.)
-- `rehype-highlight` for syntax highlighting
-- Custom components for headings, links, code blocks
-
-**Parsing:**
-- Use `gray-matter` to parse frontmatter
-- Extract title, description, category from frontmatter
-- Fallback to filename if no frontmatter
-
-**Table of Contents:**
-- Parse headings from markdown AST
-- Generate TOC with anchor links
-- Show in sidebar or floating widget
-
-### 4.3 Database Operations
-
-**Content Hashing:**
-- Use `crypto.createHash('sha256')` to generate file hashes
-- Compare hashes to detect changes
-- Store hash in `documentation_pages.current_content_hash`
-
-**Version Snapshots:**
-- Store full content in `documentation_versions.content_snapshot` (optional, for small files)
-- Or only store hash and read from file system when needed
-- Consider file size limits (e.g., only snapshot files < 100KB)
-
-**Sync Strategy:**
-- Initial sync: Scan all files, populate database
-- Incremental sync: Compare hashes, update changed files
-- Handle deleted files: Mark as `archived` in database
-- Handle new files: Create new `documentation_pages` entry
-
-### 4.4 Security Considerations
-
-**Path Validation:**
-```typescript
-// Ensure path is within documentation folder
-const docsPath = join(process.cwd(), 'documentation')
-const fullPath = join(docsPath, userProvidedPath)
-if (!fullPath.startsWith(docsPath)) {
-  throw new Error('Invalid path')
-}
-```
-
-**Access Control:**
-- Middleware checks admin role before allowing access
-- RLS policies on database tables
-- Server actions validate user permissions
-- File operations only allowed for admins
-
-**Content Sanitization:**
-- Sanitize markdown before saving to prevent XSS
-- Validate markdown structure
-- Limit file size (e.g., max 1MB per file)
-
-### 4.5 Error Handling
-
-**File Operations:**
-- Handle file not found (404 page)
-- Handle permission errors
-- Handle disk space issues
-- Log all file operations for audit
-
-**Database Operations:**
-- Handle unique constraint violations
-- Handle foreign key constraints
-- Transaction rollback on errors
-- User-friendly error messages
-
----
-
-## 5. User Workflows
-
-### 5.1 Viewing Documentation
-1. Admin navigates to `/dev-docs`
-2. Sees category list or landing page
-3. Clicks category to see documents
-4. Clicks document to view content
-5. Can search, navigate via sidebar, view TOC
-
-### 5.2 Editing Documentation
-1. Admin clicks "Edit" on published document
-2. Editor opens with current content
-3. Makes changes (auto-saved as draft)
-4. Clicks "Submit for Review"
-5. Draft status changes to `pending_approval`
-6. Appears in approval queue
-
-### 5.3 Approving Documentation
-1. Admin views approval queue
-2. Clicks draft to see diff view
-3. Reviews changes
-4. Clicks "Approve" or "Reject"
-5. If approved: file is written, version created, status updated
-6. If rejected: draft returned to creator with comment
-
-### 5.4 Adding Comments
-1. Admin views document
-2. Clicks line number or comment button
-3. Types comment and submits
-4. Comment appears with highlight
-5. Others can reply or resolve
-
-### 5.5 Viewing History
-1. Admin clicks "History" on document
-2. Sees list of all versions
-3. Clicks version to view content
-4. Can compare versions with diff
-5. Can restore old version (creates draft)
-
----
-
-## 6. Database Migration Strategy
-
-### 6.1 Initial Migration
-- Create all tables with proper constraints
-- Add indexes on frequently queried columns (file_path, status, category)
-- Set up RLS policies for admin-only access
-- Create helper functions for common operations
-
-### 6.2 Data Migration
-- Run initial sync to populate `documentation_pages`
-- Set all existing files as `published` status
-- Generate initial content hashes
-- Create initial version entry for each file
-
-### 6.3 Rollback Plan
-- Keep backup of database before migration
-- Document rollback steps
-- Test migration on staging first
-
----
-
-## 7. Testing Strategy
-
-### 7.1 Unit Tests
-- File reading/writing utilities
-- Markdown parsing functions
-- Hash generation and comparison
-- Path validation functions
-
-### 7.2 Integration Tests
-- Database sync operations
-- Draft creation and approval flow
-- Version history creation
-- Comment creation and management
-
-### 7.3 E2E Tests
-- Complete edit → submit → approve → publish workflow
-- Version rollback workflow
-- Comment and resolve workflow
-- Search functionality
-
----
-
-## 8. Future Enhancements (Post-MVP)
-
-1. **Real-time Collaboration**: Multiple admins editing simultaneously
-2. **Templates**: Document templates for common structures
-3. **Tags**: Tag documents for better organization
-4. **Analytics**: Track most viewed documents, search queries
-5. **Export Site**: Generate static documentation website
-6. **API Access**: REST API to access documentation programmatically
-7. **Webhooks**: Notify external systems on publish/update
-8. **Multi-language**: Support for multiple languages
-9. **Access Control**: Granular permissions (view, edit, approve)
-10. **Integration**: Link documentation to code (GitHub, etc.)
-
----
-
-## 9. Success Metrics
-
-- **Adoption**: Number of admins using the system
-- **Content**: Number of documents created/updated
-- **Workflow**: Average time from draft to publish
-- **Quality**: Number of comments and reviews per document
-- **Performance**: Page load times, search response times
-
----
-
-## 10. Timeline Summary
-
-- **Week 1**: Foundation, file reading, basic viewer
-- **Week 2**: Database sync, live editing, drafts
-- **Week 3**: Approval workflow, version history
-- **Week 4**: Comments system, search, enhancements
-
-**Total Estimated Time**: 4 weeks for MVP
-
----
-
-## 11. Dependencies
-
-### 11.1 NPM Packages
-- `react-markdown` - Markdown rendering
-- `remark-gfm` - GitHub Flavored Markdown
-- `rehype-highlight` - Syntax highlighting
-- `gray-matter` - Frontmatter parsing
-- `react-diff-view` or `diff2html` - Diff visualization
-- `@uiw/react-md-editor` or similar - Markdown editor
-
-### 11.2 Database
-- Supabase PostgreSQL (existing)
-- RLS policies for security
-- Full-text search capabilities
-
-### 11.3 Infrastructure
-- File system access (Node.js)
-- Admin role verification (existing auth system)
-
----
-
-## 12. Risks & Mitigation
-
-### 12.1 File System Risks
-- **Risk**: Accidental file deletion or corruption
-- **Mitigation**: Backup before writes, version history, Git version control
-
-### 12.2 Performance Risks
-- **Risk**: Slow file reading with many documents
-- **Mitigation**: Caching, lazy loading, pagination
-
-### 12.3 Security Risks
-- **Risk**: Path traversal attacks
-- **Mitigation**: Strict path validation, sanitization
-
-### 12.4 Data Sync Risks
-- **Risk**: Database and files out of sync
-- **Mitigation**: Regular sync jobs, manual sync button, hash comparison
-
----
-
-## Conclusion
-
-This plan provides a comprehensive roadmap for building a production-ready documentation system that maintains markdown files as the source of truth while enabling advanced collaboration features through database-backed workflows. The phased approach allows for incremental development and testing, ensuring a stable and reliable system.
-
+## 7. Next Steps (Action Items)
+
+1.  [ ] Create `documentation/` folder and move existing docs there (if any).
+2.  [ ] Add standard frontmatter to existing documentation files.
+3.  [ ] Create Supabase migration for `dev_doc_proposals` and `dev_doc_comments`.
+4.  [ ] Scaffold the `/dev-docs` route layout.

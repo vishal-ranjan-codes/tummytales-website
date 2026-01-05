@@ -106,7 +106,7 @@ async function handlePaymentAuthorized(event: RazorpayWebhookEvent) {
   // If payment is already captured, finalize the invoice
   if (payment.captured) {
     try {
-      await finalizeInvoicePayment(invoiceId, payment.id, payment.order_id, payment)
+      await finalizeInvoicePayment(String(invoiceId || ''), String(payment.id || ''), String(payment.order_id || ''), payment)
     } catch (error) {
       console.error('Error processing BB invoice payment:', error)
     }
@@ -134,7 +134,7 @@ async function handlePaymentCaptured(event: RazorpayWebhookEvent) {
   
   // Handle BB invoice payment (v2)
   try {
-    await finalizeInvoicePayment(invoiceId, payment.id, payment.order_id, payment)
+    await finalizeInvoicePayment(String(invoiceId || ''), String(payment.id || ''), String(payment.order_id || ''), payment)
   } catch (error) {
     console.error('Error processing BB invoice payment:', error)
   }

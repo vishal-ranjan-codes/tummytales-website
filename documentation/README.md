@@ -2,6 +2,58 @@
 
 Welcome to the BellyBox development documentation. This documentation provides comprehensive information about all systems, features, logic, and rules of the BellyBox application.
 
+## About This Documentation
+
+This documentation serves as the **single source of truth** for the BellyBox platform. It documents both:
+
+- **Current Implementation**: What has been built and is live in production
+- **Future Plans**: Features and systems planned for future phases
+- **Progress Tracking**: Development status and completion tracking
+
+The documentation is organized by functional domains and user roles, making it easy to find information about specific systems, features, and workflows. Each document follows a consistent structure to ensure clarity and completeness.
+
+## Current Development Status
+
+**Overall Progress**: Phase 0 ✅ Complete | Phase 1 ✅ Complete | Phase 2 🚧 In Progress
+
+| Phase | Status | Focus |
+|-------|--------|-------|
+| **Phase 0: Foundation & Multi-Role Auth** | ✅ **COMPLETE** | Authentication, role management, dashboards |
+| **Phase 1: Vendor Onboarding & Discovery** | ✅ **COMPLETE** | Vendor onboarding, menu management, public discovery |
+| **Phase 2: Subscriptions & Orders** | 🚧 **IN PROGRESS** | Subscription system V2, trials, orders, payments |
+| **Phase 3: Delivery & Operations** | ⏸️ **PENDING** | Rider routes, delivery tracking, payouts |
+| **Phase 4: Analytics & Scale** | ⏸️ **PENDING** | Multi-city, analytics, mobile apps |
+
+## How to Use This Documentation
+
+1. **Start Here**: Begin with [01-introduction](01-introduction/overview.md) to understand the platform's vision, concept, and technology stack.
+2. **Explore Systems**: Navigate to specific system folders (e.g., `03-subscription-system/`) for detailed information.
+3. **Follow Workflows**: Check the [15-workflows](15-workflows/overview.md) section for end-to-end processes.
+4. **Reference**: Use the [18-glossary](18-glossary/overview.md) for definitions of terms and concepts.
+
+## Documentation Structure
+
+Each system documentation follows this structure:
+
+1. **Brief Description** - What this document covers
+2. **Overview** - High-level explanation
+3. **Key Concepts** - Important terms and definitions
+4. **How It Works** - Step-by-step explanation
+5. **Rules and Logic** - Business rules and edge cases
+6. **Technical Details** - Implementation specifics (for technical docs)
+7. **Examples** - Real-world scenarios
+8. **Related Documentation** - Links to related docs
+9. **Status** - Current implementation status and future plans
+
+## Contributing
+
+Documentation is maintained in markdown files within the `documentation/` folder. All documentation should:
+
+- Be clear and accessible to both technical and non-technical audiences
+- Include both current state and future plans
+- Track progress and implementation status
+- Cross-reference related documentation
+
 ## Navigation
 
 ### 01. [Introduction](01-introduction/overview.md)
@@ -176,11 +228,4 @@ Welcome to the BellyBox development documentation. This documentation provides c
 - [Acronyms](18-glossary/acronyms.md) - Acronyms and abbreviations
 - [Concepts](18-glossary/concepts.md) - Core concepts explained
 
-## How to Use This Documentation
-
-This documentation is organized by functional domains and user roles. Each section contains detailed information about specific systems, features, and workflows. Start with the Introduction section to understand the overall system, then dive into specific areas as needed.
-
-## Contributing
-
-Documentation is maintained in markdown files and can be edited through the development documentation system at `/dev-docs` (admin access required).
 

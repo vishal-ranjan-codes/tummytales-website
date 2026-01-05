@@ -236,12 +236,12 @@ export async function executeRenewalJob(
       nextBatchNumber: hasMore ? currentBatch : undefined,
     }
 
-    await completeJob(job.id, result)
+    await completeJob(job.id, result as unknown as Record<string, unknown>)
     await logJob({
       jobId: job.id,
       level: 'info',
       message: `Renewal job completed: ${processed} processed, ${invoicesCreated} invoices created, ${errors} errors`,
-      metadata: result,
+      metadata: result as unknown as Record<string, unknown>,
     })
 
     return result

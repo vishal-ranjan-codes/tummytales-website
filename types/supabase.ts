@@ -181,6 +181,1018 @@ export type Database = {
         }
         Relationships: []
       }
+      bb_credits: {
+        Row: {
+          consumer_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          reason: string
+          slot: Database["public"]["Enums"]["meal_slot"]
+          source_order_id: string | null
+          status: Database["public"]["Enums"]["bb_credit_status"]
+          subscription_id: string
+          used_at: string | null
+          used_invoice_id: string | null
+          vendor_id: string
+        }
+        Insert: {
+          consumer_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          reason: string
+          slot: Database["public"]["Enums"]["meal_slot"]
+          source_order_id?: string | null
+          status?: Database["public"]["Enums"]["bb_credit_status"]
+          subscription_id: string
+          used_at?: string | null
+          used_invoice_id?: string | null
+          vendor_id: string
+        }
+        Update: {
+          consumer_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          reason?: string
+          slot?: Database["public"]["Enums"]["meal_slot"]
+          source_order_id?: string | null
+          status?: Database["public"]["Enums"]["bb_credit_status"]
+          subscription_id?: string
+          used_at?: string | null
+          used_invoice_id?: string | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_credits_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_credits_source_order_id_fkey"
+            columns: ["source_order_id"]
+            isOneToOne: false
+            referencedRelation: "bb_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_credits_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "bb_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_credits_used_invoice_id_fkey"
+            columns: ["used_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "bb_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_credits_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_cycles: {
+        Row: {
+          created_at: string
+          cycle_end: string
+          cycle_start: string
+          group_id: string
+          id: string
+          is_first_cycle: boolean
+          period_type: Database["public"]["Enums"]["bb_plan_period_type"]
+          renewal_date: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_end: string
+          cycle_start: string
+          group_id: string
+          id?: string
+          is_first_cycle?: boolean
+          period_type: Database["public"]["Enums"]["bb_plan_period_type"]
+          renewal_date: string
+        }
+        Update: {
+          created_at?: string
+          cycle_end?: string
+          cycle_start?: string
+          group_id?: string
+          id?: string
+          is_first_cycle?: boolean
+          period_type?: Database["public"]["Enums"]["bb_plan_period_type"]
+          renewal_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_cycles_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "bb_subscription_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_invoice_lines: {
+        Row: {
+          billable_meals: number
+          commission_pct: number
+          commission_per_meal: number
+          credits_applied: number
+          delivery_fee_per_meal: number
+          id: string
+          invoice_id: string
+          line_total: number
+          scheduled_meals: number
+          slot: Database["public"]["Enums"]["meal_slot"]
+          subscription_id: string | null
+          unit_price_customer: number
+          vendor_base_price_per_meal: number
+        }
+        Insert: {
+          billable_meals?: number
+          commission_pct: number
+          commission_per_meal: number
+          credits_applied?: number
+          delivery_fee_per_meal: number
+          id?: string
+          invoice_id: string
+          line_total?: number
+          scheduled_meals?: number
+          slot: Database["public"]["Enums"]["meal_slot"]
+          subscription_id?: string | null
+          unit_price_customer: number
+          vendor_base_price_per_meal: number
+        }
+        Update: {
+          billable_meals?: number
+          commission_pct?: number
+          commission_per_meal?: number
+          credits_applied?: number
+          delivery_fee_per_meal?: number
+          id?: string
+          invoice_id?: string
+          line_total?: number
+          scheduled_meals?: number
+          slot?: Database["public"]["Enums"]["meal_slot"]
+          subscription_id?: string | null
+          unit_price_customer?: number
+          vendor_base_price_per_meal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "bb_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_invoice_lines_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "bb_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_invoices: {
+        Row: {
+          commission_total: number
+          consumer_id: string
+          created_at: string
+          currency: string
+          cycle_id: string | null
+          delivery_fee_total: number
+          discount_total: number
+          group_id: string | null
+          id: string
+          last_retry_at: string | null
+          paid_at: string | null
+          razorpay_order_id: string | null
+          refund_amount: number | null
+          refund_id: string | null
+          refund_status: string | null
+          refunded_at: string | null
+          retry_count: number
+          status: Database["public"]["Enums"]["bb_invoice_status"]
+          subtotal_vendor_base: number
+          total_amount: number
+          trial_id: string | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          commission_total?: number
+          consumer_id: string
+          created_at?: string
+          currency?: string
+          cycle_id?: string | null
+          delivery_fee_total?: number
+          discount_total?: number
+          group_id?: string | null
+          id?: string
+          last_retry_at?: string | null
+          paid_at?: string | null
+          razorpay_order_id?: string | null
+          refund_amount?: number | null
+          refund_id?: string | null
+          refund_status?: string | null
+          refunded_at?: string | null
+          retry_count?: number
+          status?: Database["public"]["Enums"]["bb_invoice_status"]
+          subtotal_vendor_base?: number
+          total_amount?: number
+          trial_id?: string | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          commission_total?: number
+          consumer_id?: string
+          created_at?: string
+          currency?: string
+          cycle_id?: string | null
+          delivery_fee_total?: number
+          discount_total?: number
+          group_id?: string | null
+          id?: string
+          last_retry_at?: string | null
+          paid_at?: string | null
+          razorpay_order_id?: string | null
+          refund_amount?: number | null
+          refund_id?: string | null
+          refund_status?: string | null
+          refunded_at?: string | null
+          retry_count?: number
+          status?: Database["public"]["Enums"]["bb_invoice_status"]
+          subtotal_vendor_base?: number
+          total_amount?: number
+          trial_id?: string | null
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_invoices_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_invoices_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "bb_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_invoices_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "bb_subscription_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_invoices_trial_id_fkey"
+            columns: ["trial_id"]
+            isOneToOne: false
+            referencedRelation: "bb_trials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_invoices_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_orders: {
+        Row: {
+          consumer_id: string
+          created_at: string
+          delivery_address_id: string
+          delivery_window_end: string | null
+          delivery_window_start: string | null
+          group_id: string | null
+          id: string
+          service_date: string
+          slot: Database["public"]["Enums"]["meal_slot"]
+          special_instructions: string | null
+          status: Database["public"]["Enums"]["bb_order_status"]
+          subscription_id: string | null
+          trial_id: string | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          consumer_id: string
+          created_at?: string
+          delivery_address_id: string
+          delivery_window_end?: string | null
+          delivery_window_start?: string | null
+          group_id?: string | null
+          id?: string
+          service_date: string
+          slot: Database["public"]["Enums"]["meal_slot"]
+          special_instructions?: string | null
+          status?: Database["public"]["Enums"]["bb_order_status"]
+          subscription_id?: string | null
+          trial_id?: string | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          consumer_id?: string
+          created_at?: string
+          delivery_address_id?: string
+          delivery_window_end?: string | null
+          delivery_window_start?: string | null
+          group_id?: string | null
+          id?: string
+          service_date?: string
+          slot?: Database["public"]["Enums"]["meal_slot"]
+          special_instructions?: string | null
+          status?: Database["public"]["Enums"]["bb_order_status"]
+          subscription_id?: string | null
+          trial_id?: string | null
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_orders_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_orders_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_orders_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "bb_subscription_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_orders_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "bb_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_orders_trial_id_fkey"
+            columns: ["trial_id"]
+            isOneToOne: false
+            referencedRelation: "bb_trials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_plans: {
+        Row: {
+          active: boolean
+          allowed_slots: Database["public"]["Enums"]["meal_slot"][]
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          period_type: Database["public"]["Enums"]["bb_plan_period_type"]
+          skip_limits: Json
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          allowed_slots?: Database["public"]["Enums"]["meal_slot"][]
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          period_type: Database["public"]["Enums"]["bb_plan_period_type"]
+          skip_limits?: Json
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          allowed_slots?: Database["public"]["Enums"]["meal_slot"][]
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          period_type?: Database["public"]["Enums"]["bb_plan_period_type"]
+          skip_limits?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bb_platform_settings: {
+        Row: {
+          cancel_notice_hours: number | null
+          cancel_refund_policy: string | null
+          commission_pct: number
+          created_at: string
+          credit_expiry_days: number
+          delivery_fee_per_meal: number
+          id: string
+          max_pause_days: number | null
+          pause_notice_hours: number | null
+          resume_notice_hours: number | null
+          skip_cutoff_hours: number
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          cancel_notice_hours?: number | null
+          cancel_refund_policy?: string | null
+          commission_pct?: number
+          created_at?: string
+          credit_expiry_days?: number
+          delivery_fee_per_meal?: number
+          id?: string
+          max_pause_days?: number | null
+          pause_notice_hours?: number | null
+          resume_notice_hours?: number | null
+          skip_cutoff_hours?: number
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          cancel_notice_hours?: number | null
+          cancel_refund_policy?: string | null
+          commission_pct?: number
+          created_at?: string
+          credit_expiry_days?: number
+          delivery_fee_per_meal?: number
+          id?: string
+          max_pause_days?: number | null
+          pause_notice_hours?: number | null
+          resume_notice_hours?: number | null
+          skip_cutoff_hours?: number
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bb_skips: {
+        Row: {
+          consumer_id: string
+          created_at: string
+          credited: boolean
+          id: string
+          service_date: string
+          slot: Database["public"]["Enums"]["meal_slot"]
+          subscription_id: string
+          vendor_id: string
+        }
+        Insert: {
+          consumer_id: string
+          created_at?: string
+          credited?: boolean
+          id?: string
+          service_date: string
+          slot: Database["public"]["Enums"]["meal_slot"]
+          subscription_id: string
+          vendor_id: string
+        }
+        Update: {
+          consumer_id?: string
+          created_at?: string
+          credited?: boolean
+          id?: string
+          service_date?: string
+          slot?: Database["public"]["Enums"]["meal_slot"]
+          subscription_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_skips_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_skips_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "bb_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_skips_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_subscription_groups: {
+        Row: {
+          consumer_id: string
+          created_at: string
+          delivery_address_id: string
+          id: string
+          mandate_expires_at: string | null
+          mandate_status: string | null
+          payment_method: string | null
+          plan_id: string
+          razorpay_customer_id: string | null
+          razorpay_mandate_id: string | null
+          renewal_date: string
+          start_date: string
+          status: Database["public"]["Enums"]["bb_subscription_status"]
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          consumer_id: string
+          created_at?: string
+          delivery_address_id: string
+          id?: string
+          mandate_expires_at?: string | null
+          mandate_status?: string | null
+          payment_method?: string | null
+          plan_id: string
+          razorpay_customer_id?: string | null
+          razorpay_mandate_id?: string | null
+          renewal_date: string
+          start_date: string
+          status?: Database["public"]["Enums"]["bb_subscription_status"]
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          consumer_id?: string
+          created_at?: string
+          delivery_address_id?: string
+          id?: string
+          mandate_expires_at?: string | null
+          mandate_status?: string | null
+          payment_method?: string | null
+          plan_id?: string
+          razorpay_customer_id?: string | null
+          razorpay_mandate_id?: string | null
+          renewal_date?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["bb_subscription_status"]
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_subscription_groups_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_subscription_groups_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_subscription_groups_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "bb_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_subscription_groups_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_subscriptions: {
+        Row: {
+          consumer_id: string
+          created_at: string
+          credited_skips_used_in_cycle: number
+          group_id: string
+          id: string
+          plan_id: string
+          slot: Database["public"]["Enums"]["meal_slot"]
+          status: Database["public"]["Enums"]["bb_subscription_status"]
+          updated_at: string
+          vendor_id: string
+          weekdays: number[]
+        }
+        Insert: {
+          consumer_id: string
+          created_at?: string
+          credited_skips_used_in_cycle?: number
+          group_id: string
+          id?: string
+          plan_id: string
+          slot: Database["public"]["Enums"]["meal_slot"]
+          status?: Database["public"]["Enums"]["bb_subscription_status"]
+          updated_at?: string
+          vendor_id: string
+          weekdays: number[]
+        }
+        Update: {
+          consumer_id?: string
+          created_at?: string
+          credited_skips_used_in_cycle?: number
+          group_id?: string
+          id?: string
+          plan_id?: string
+          slot?: Database["public"]["Enums"]["meal_slot"]
+          status?: Database["public"]["Enums"]["bb_subscription_status"]
+          updated_at?: string
+          vendor_id?: string
+          weekdays?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_subscriptions_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_subscriptions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "bb_subscription_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "bb_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_subscriptions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_trial_meals: {
+        Row: {
+          created_at: string
+          id: string
+          service_date: string
+          slot: Database["public"]["Enums"]["meal_slot"]
+          trial_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_date: string
+          slot: Database["public"]["Enums"]["meal_slot"]
+          trial_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_date?: string
+          slot?: Database["public"]["Enums"]["meal_slot"]
+          trial_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_trial_meals_trial_id_fkey"
+            columns: ["trial_id"]
+            isOneToOne: false
+            referencedRelation: "bb_trials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_trial_types: {
+        Row: {
+          active: boolean
+          allowed_slots: Database["public"]["Enums"]["meal_slot"][]
+          cooldown_days: number
+          created_at: string
+          discount_pct: number | null
+          duration_days: number
+          fixed_price: number | null
+          id: string
+          max_meals: number
+          name: string
+          pricing_mode: Database["public"]["Enums"]["bb_pricing_mode"]
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          allowed_slots?: Database["public"]["Enums"]["meal_slot"][]
+          cooldown_days?: number
+          created_at?: string
+          discount_pct?: number | null
+          duration_days: number
+          fixed_price?: number | null
+          id?: string
+          max_meals: number
+          name: string
+          pricing_mode: Database["public"]["Enums"]["bb_pricing_mode"]
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          allowed_slots?: Database["public"]["Enums"]["meal_slot"][]
+          cooldown_days?: number
+          created_at?: string
+          discount_pct?: number | null
+          duration_days?: number
+          fixed_price?: number | null
+          id?: string
+          max_meals?: number
+          name?: string
+          pricing_mode?: Database["public"]["Enums"]["bb_pricing_mode"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bb_trials: {
+        Row: {
+          consumer_id: string
+          created_at: string
+          end_date: string
+          id: string
+          start_date: string
+          status: Database["public"]["Enums"]["bb_trial_status"]
+          trial_type_id: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          consumer_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          start_date: string
+          status?: Database["public"]["Enums"]["bb_trial_status"]
+          trial_type_id: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          consumer_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["bb_trial_status"]
+          trial_type_id?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_trials_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_trials_trial_type_id_fkey"
+            columns: ["trial_type_id"]
+            isOneToOne: false
+            referencedRelation: "bb_trial_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_trials_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_vendor_holidays: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          reason: string | null
+          slot: Database["public"]["Enums"]["meal_slot"] | null
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          reason?: string | null
+          slot?: Database["public"]["Enums"]["meal_slot"] | null
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          reason?: string | null
+          slot?: Database["public"]["Enums"]["meal_slot"] | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_vendor_holidays_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_vendor_slot_pricing: {
+        Row: {
+          active: boolean
+          base_price: number
+          delivery_window_end: string | null
+          delivery_window_start: string | null
+          slot: Database["public"]["Enums"]["meal_slot"]
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          active?: boolean
+          base_price: number
+          delivery_window_end?: string | null
+          delivery_window_start?: string | null
+          slot: Database["public"]["Enums"]["meal_slot"]
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          active?: boolean
+          base_price?: number
+          delivery_window_end?: string | null
+          delivery_window_start?: string | null
+          slot?: Database["public"]["Enums"]["meal_slot"]
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_vendor_slot_pricing_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_vendor_trial_types: {
+        Row: {
+          active: boolean
+          created_at: string
+          trial_type_id: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          trial_type_id: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          trial_type_id?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_vendor_trial_types_trial_type_id_fkey"
+            columns: ["trial_type_id"]
+            isOneToOne: false
+            referencedRelation: "bb_trial_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bb_vendor_trial_types_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_webhook_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          invoice_id: string | null
+          metadata: Json | null
+          payment_id: string | null
+          razorpay_order_id: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          invoice_id?: string | null
+          metadata?: Json | null
+          payment_id?: string | null
+          razorpay_order_id?: string | null
+          status: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          invoice_id?: string | null
+          metadata?: Json | null
+          payment_id?: string | null
+          razorpay_order_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_webhook_logs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "bb_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bb_zone_pricing: {
+        Row: {
+          commission_pct: number
+          created_at: string
+          delivery_fee_per_meal: number
+          updated_at: string
+          zone_id: string
+        }
+        Insert: {
+          commission_pct: number
+          created_at?: string
+          delivery_fee_per_meal: number
+          updated_at?: string
+          zone_id: string
+        }
+        Update: {
+          commission_pct?: number
+          created_at?: string
+          delivery_fee_per_meal?: number
+          updated_at?: string
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bb_zone_pricing_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: true
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meal_choice_availability: {
         Row: {
           available: boolean
@@ -287,226 +1299,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      orders: {
-        Row: {
-          cancelled_at: string | null
-          consumer_id: string
-          created_at: string
-          date: string
-          delivered_at: string | null
-          delivery_address_id: string
-          failure_reason: string | null
-          id: string
-          meal_id: string | null
-          picked_at: string | null
-          prepared_at: string | null
-          ready_at: string | null
-          slot: Database["public"]["Enums"]["meal_slot"]
-          special_instructions: string | null
-          status: Database["public"]["Enums"]["order_status"]
-          subscription_id: string
-          updated_at: string
-          vendor_id: string
-        }
-        Insert: {
-          cancelled_at?: string | null
-          consumer_id: string
-          created_at?: string
-          date: string
-          delivered_at?: string | null
-          delivery_address_id: string
-          failure_reason?: string | null
-          id?: string
-          meal_id?: string | null
-          picked_at?: string | null
-          prepared_at?: string | null
-          ready_at?: string | null
-          slot: Database["public"]["Enums"]["meal_slot"]
-          special_instructions?: string | null
-          status?: Database["public"]["Enums"]["order_status"]
-          subscription_id: string
-          updated_at?: string
-          vendor_id: string
-        }
-        Update: {
-          cancelled_at?: string | null
-          consumer_id?: string
-          created_at?: string
-          date?: string
-          delivered_at?: string | null
-          delivery_address_id?: string
-          failure_reason?: string | null
-          id?: string
-          meal_id?: string | null
-          picked_at?: string | null
-          prepared_at?: string | null
-          ready_at?: string | null
-          slot?: Database["public"]["Enums"]["meal_slot"]
-          special_instructions?: string | null
-          status?: Database["public"]["Enums"]["order_status"]
-          subscription_id?: string
-          updated_at?: string
-          vendor_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "orders_consumer_id_fkey"
-            columns: ["consumer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_delivery_address_id_fkey"
-            columns: ["delivery_address_id"]
-            isOneToOne: false
-            referencedRelation: "addresses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: false
-            referencedRelation: "meals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "subscriptions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payments: {
-        Row: {
-          amount: number
-          consumer_id: string
-          created_at: string
-          currency: string
-          failure_reason: string | null
-          id: string
-          metadata: Json | null
-          order_id: string | null
-          provider: string
-          provider_order_id: string | null
-          provider_payment_id: string
-          refund_amount: number | null
-          refund_reason: string | null
-          status: Database["public"]["Enums"]["payment_status"]
-          subscription_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          amount: number
-          consumer_id: string
-          created_at?: string
-          currency?: string
-          failure_reason?: string | null
-          id?: string
-          metadata?: Json | null
-          order_id?: string | null
-          provider?: string
-          provider_order_id?: string | null
-          provider_payment_id: string
-          refund_amount?: number | null
-          refund_reason?: string | null
-          status?: Database["public"]["Enums"]["payment_status"]
-          subscription_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          amount?: number
-          consumer_id?: string
-          created_at?: string
-          currency?: string
-          failure_reason?: string | null
-          id?: string
-          metadata?: Json | null
-          order_id?: string | null
-          provider?: string
-          provider_order_id?: string | null
-          provider_payment_id?: string
-          refund_amount?: number | null
-          refund_reason?: string | null
-          status?: Database["public"]["Enums"]["payment_status"]
-          subscription_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payments_consumer_id_fkey"
-            columns: ["consumer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "subscriptions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      plans: {
-        Row: {
-          active: boolean
-          base_price: number
-          created_at: string
-          currency: string
-          description: string | null
-          id: string
-          meals_per_day: Json
-          name: string
-          period: Database["public"]["Enums"]["subscription_period"]
-          trial_days: number
-          updated_at: string
-        }
-        Insert: {
-          active?: boolean
-          base_price: number
-          created_at?: string
-          currency?: string
-          description?: string | null
-          id?: string
-          meals_per_day: Json
-          name: string
-          period: Database["public"]["Enums"]["subscription_period"]
-          trial_days?: number
-          updated_at?: string
-        }
-        Update: {
-          active?: boolean
-          base_price?: number
-          created_at?: string
-          currency?: string
-          description?: string | null
-          id?: string
-          meals_per_day?: Json
-          name?: string
-          period?: Database["public"]["Enums"]["subscription_period"]
-          trial_days?: number
-          updated_at?: string
-        }
-        Relationships: []
       }
       profiles: {
         Row: {
@@ -722,155 +1514,6 @@ export type Database = {
           },
         ]
       }
-      subscription_prefs: {
-        Row: {
-          created_at: string
-          days_of_week: number[]
-          id: string
-          preferred_items: Json | null
-          preferred_meal_id: string | null
-          slot: Database["public"]["Enums"]["meal_slot"]
-          special_instructions: string | null
-          subscription_id: string
-          time_window_end: string | null
-          time_window_start: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          days_of_week: number[]
-          id?: string
-          preferred_items?: Json | null
-          preferred_meal_id?: string | null
-          slot: Database["public"]["Enums"]["meal_slot"]
-          special_instructions?: string | null
-          subscription_id: string
-          time_window_end?: string | null
-          time_window_start?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          days_of_week?: number[]
-          id?: string
-          preferred_items?: Json | null
-          preferred_meal_id?: string | null
-          slot?: Database["public"]["Enums"]["meal_slot"]
-          special_instructions?: string | null
-          subscription_id?: string
-          time_window_end?: string | null
-          time_window_start?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subscription_prefs_preferred_meal_id_fkey"
-            columns: ["preferred_meal_id"]
-            isOneToOne: false
-            referencedRelation: "meals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subscription_prefs_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "subscriptions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      subscriptions: {
-        Row: {
-          billing_type: Database["public"]["Enums"]["billing_type"]
-          cancellation_reason: string | null
-          cancelled_at: string | null
-          consumer_id: string
-          created_at: string
-          currency: string
-          delivery_address_id: string
-          expires_on: string | null
-          id: string
-          paused_until: string | null
-          plan_id: string
-          price: number
-          renews_on: string | null
-          starts_on: string
-          status: Database["public"]["Enums"]["subscription_status"]
-          trial_end_date: string | null
-          updated_at: string
-          vendor_id: string
-        }
-        Insert: {
-          billing_type?: Database["public"]["Enums"]["billing_type"]
-          cancellation_reason?: string | null
-          cancelled_at?: string | null
-          consumer_id: string
-          created_at?: string
-          currency?: string
-          delivery_address_id: string
-          expires_on?: string | null
-          id?: string
-          paused_until?: string | null
-          plan_id: string
-          price: number
-          renews_on?: string | null
-          starts_on: string
-          status?: Database["public"]["Enums"]["subscription_status"]
-          trial_end_date?: string | null
-          updated_at?: string
-          vendor_id: string
-        }
-        Update: {
-          billing_type?: Database["public"]["Enums"]["billing_type"]
-          cancellation_reason?: string | null
-          cancelled_at?: string | null
-          consumer_id?: string
-          created_at?: string
-          currency?: string
-          delivery_address_id?: string
-          expires_on?: string | null
-          id?: string
-          paused_until?: string | null
-          plan_id?: string
-          price?: number
-          renews_on?: string | null
-          starts_on?: string
-          status?: Database["public"]["Enums"]["subscription_status"]
-          trial_end_date?: string | null
-          updated_at?: string
-          vendor_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subscriptions_consumer_id_fkey"
-            columns: ["consumer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subscriptions_delivery_address_id_fkey"
-            columns: ["delivery_address_id"]
-            isOneToOne: false
-            referencedRelation: "addresses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subscriptions_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subscriptions_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       vendor_docs: {
         Row: {
           admin_notes: string | null
@@ -953,8 +1596,8 @@ export type Database = {
           capacity_breakfast: number
           capacity_dinner: number
           capacity_lunch: number
-          delivery_slots: Json | null
           created_at: string
+          delivery_slots: Json | null
           display_name: string
           fssai_no: string | null
           id: string
@@ -976,8 +1619,8 @@ export type Database = {
           capacity_breakfast?: number
           capacity_dinner?: number
           capacity_lunch?: number
-          delivery_slots?: Json | null
           created_at?: string
+          delivery_slots?: Json | null
           display_name: string
           fssai_no?: string | null
           id?: string
@@ -999,8 +1642,8 @@ export type Database = {
           capacity_breakfast?: number
           capacity_dinner?: number
           capacity_lunch?: number
-          delivery_slots?: Json | null
           created_at?: string
+          delivery_slots?: Json | null
           display_name?: string
           fssai_no?: string | null
           id?: string
@@ -1077,6 +1720,253 @@ export type Database = {
         Args: { role: string; user_id: string }
         Returns: undefined
       }
+      bb_apply_skip: {
+        Args: {
+          p_service_date: string
+          p_slot: Database["public"]["Enums"]["meal_slot"]
+          p_subscription_id: string
+        }
+        Returns: Record<string, unknown>
+      }
+      bb_apply_vendor_holiday: {
+        Args: {
+          p_date: string
+          p_slot?: Database["public"]["Enums"]["meal_slot"]
+          p_vendor_id: string
+        }
+        Returns: Record<string, unknown>
+      }
+      bb_auto_cancel_paused_group: {
+        Args: { p_group_id: string }
+        Returns: Record<string, unknown>
+      }
+      bb_cancel_subscription_group: {
+        Args: {
+          p_cancel_date: string
+          p_cancellation_reason: string
+          p_group_id: string
+          p_refund_preference: string
+        }
+        Returns: Record<string, unknown>
+      }
+      bb_count_scheduled_meals: {
+        Args: {
+          p_end_date: string
+          p_slot: Database["public"]["Enums"]["meal_slot"]
+          p_start_date: string
+          p_vendor_id: string
+          p_weekdays: number[]
+        }
+        Returns: number
+      }
+      bb_create_job: {
+        Args: {
+          p_job_type: string
+          p_max_retries?: number
+          p_payload?: Json
+          p_scheduled_at?: string
+        }
+        Returns: {
+          completed_at: string
+          created_at: string
+          error_message: string
+          id: string
+          job_type: string
+          max_retries: number
+          payload: Json
+          result: Json
+          retry_count: number
+          scheduled_at: string
+          started_at: string
+          status: string
+          updated_at: string
+        }[]
+      }
+      bb_create_subscription_checkout: {
+        Args: {
+          p_address_id: string
+          p_consumer_id: string
+          p_payment_method?: string
+          p_plan_id: string
+          p_slot_weekdays: Json
+          p_start_date: string
+          p_vendor_id: string
+        }
+        Returns: Record<string, unknown>
+      }
+      bb_create_trial_checkout: {
+        Args: {
+          p_address_id: string
+          p_consumer_id: string
+          p_start_date: string
+          p_trial_meals: Json
+          p_trial_type_id: string
+          p_vendor_id: string
+        }
+        Returns: Record<string, unknown>
+      }
+      bb_finalize_invoice_paid:
+        | {
+            Args: { p_invoice_id: string; p_razorpay_order_id: string }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_invoice_id: string
+              p_razorpay_order_id: string
+              p_razorpay_payment_id: string
+            }
+            Returns: number
+          }
+      bb_finalize_trial_invoice_paid: {
+        Args: {
+          p_invoice_id: string
+          p_razorpay_order_id: string
+          p_razorpay_payment_id: string
+        }
+        Returns: number
+      }
+      bb_get_cycle_boundaries:
+        | {
+            Args: {
+              p_period_type: Database["public"]["Enums"]["bb_plan_period_type"]
+              p_start_date: string
+            }
+            Returns: {
+              cycle_end: string
+              cycle_start: string
+              renewal_date: string
+            }[]
+          }
+        | {
+            Args: {
+              p_period_type: Database["public"]["Enums"]["bb_plan_period_type"]
+              p_start_date: string
+            }
+            Returns: {
+              cycle_end: string
+              cycle_start: string
+              renewal_date: string
+            }[]
+          }
+      bb_get_delivery_window: {
+        Args: {
+          p_slot: Database["public"]["Enums"]["meal_slot"]
+          p_vendor_id: string
+        }
+        Returns: Record<string, unknown>
+      }
+      bb_get_next_monday: { Args: { input_date: string }; Returns: string }
+      bb_get_next_month_start: { Args: { input_date: string }; Returns: string }
+      bb_get_pending_jobs: {
+        Args: { p_job_type?: string; p_limit?: number }
+        Returns: {
+          created_at: string
+          id: string
+          job_type: string
+          payload: Json
+          scheduled_at: string
+          status: string
+        }[]
+      }
+      bb_get_platform_settings: {
+        Args: never
+        Returns: {
+          cancel_notice_hours: number
+          commission_pct: number
+          credit_expiry_days: number
+          delivery_fee_per_meal: number
+          max_pause_days: number
+          pause_notice_hours: number
+          resume_notice_hours: number
+          skip_cutoff_hours: number
+          timezone: string
+        }[]
+      }
+      bb_get_vendor_slot_pricing: {
+        Args: {
+          p_slot: Database["public"]["Enums"]["meal_slot"]
+          p_vendor_id: string
+        }
+        Returns: number
+      }
+      bb_log_job: {
+        Args: {
+          p_job_id: string
+          p_level: string
+          p_message: string
+          p_metadata?: Json
+        }
+        Returns: string
+      }
+      bb_mark_job_complete: {
+        Args: { p_job_id: string; p_result?: Json }
+        Returns: {
+          completed_at: string
+          id: string
+          status: string
+        }[]
+      }
+      bb_mark_job_failed: {
+        Args: { p_error_message: string; p_job_id: string }
+        Returns: {
+          error_message: string
+          id: string
+          retry_count: number
+          status: string
+        }[]
+      }
+      bb_pause_subscription_group: {
+        Args: { p_group_id: string; p_pause_date: string }
+        Returns: Record<string, unknown>
+      }
+      bb_preview_subscription_pricing: {
+        Args: {
+          p_plan_id: string
+          p_slot_weekdays: Json
+          p_start_date: string
+          p_vendor_id: string
+        }
+        Returns: Json
+      }
+      bb_resume_subscription_group: {
+        Args: { p_group_id: string; p_resume_date: string }
+        Returns: Record<string, unknown>
+      }
+      bb_run_renewals: {
+        Args: {
+          p_period_type: Database["public"]["Enums"]["bb_plan_period_type"]
+          p_run_date?: string
+        }
+        Returns: Json
+      }
+      bb_update_job_status: {
+        Args: {
+          p_error_message?: string
+          p_job_id: string
+          p_result?: Json
+          p_status: string
+        }
+        Returns: {
+          completed_at: string
+          created_at: string
+          error_message: string
+          id: string
+          job_type: string
+          max_retries: number
+          payload: Json
+          result: Json
+          retry_count: number
+          scheduled_at: string
+          started_at: string
+          status: string
+          updated_at: string
+        }[]
+      }
+      bb_validate_weekdays: {
+        Args: { weekdays_arr: number[] }
+        Returns: boolean
+      }
       check_user_role: {
         Args: { role: string; user_id: string }
         Returns: boolean
@@ -1090,33 +1980,40 @@ export type Database = {
     }
     Enums: {
       address_label: "pg" | "home" | "office" | "kitchen"
-      billing_type: "prepaid" | "auto"
+      bb_credit_status: "available" | "used" | "expired" | "void"
+      bb_invoice_status:
+        | "draft"
+        | "pending_payment"
+        | "paid"
+        | "failed"
+        | "void"
+      bb_order_status:
+        | "scheduled"
+        | "delivered"
+        | "skipped_by_customer"
+        | "skipped_by_vendor"
+        | "failed_ops"
+        | "customer_no_show"
+        | "cancelled"
+      bb_plan_period_type: "weekly" | "monthly"
+      bb_pricing_mode: "per_meal" | "fixed"
+      bb_subscription_status: "active" | "paused" | "cancelled"
+      bb_trial_status: "scheduled" | "active" | "completed" | "cancelled"
+      credit_reason:
+        | "customer_skip"
+        | "vendor_holiday"
+        | "ops_failure"
+        | "manual_adjustment"
+      invoice_status: "pending" | "paid" | "failed" | "refunded"
+      job_status: "pending" | "running" | "success" | "failed"
       kyc_status: "pending" | "approved" | "rejected"
       meal_slot: "breakfast" | "lunch" | "dinner"
-      order_status:
-        | "scheduled"
-        | "preparing"
-        | "ready"
-        | "picked"
-        | "delivered"
-        | "failed"
-        | "skipped"
-        | "cancelled"
-      payment_status:
-        | "pending"
-        | "success"
-        | "failed"
-        | "refunded"
-        | "partially_refunded"
+      period_type: "weekly" | "monthly"
+      price_type: "per_meal" | "fixed"
       rider_doc_type: "driving_license" | "aadhaar" | "other"
       rider_status: "active" | "off" | "pending" | "suspended"
-      subscription_period: "weekly" | "biweekly" | "monthly"
-      subscription_status:
-        | "trial"
-        | "active"
-        | "paused"
-        | "cancelled"
-        | "expired"
+      slot_type: "breakfast" | "lunch" | "dinner"
+      trial_status: "scheduled" | "active" | "completed" | "cancelled"
       vehicle_type: "bike" | "ev_bike" | "ev_truck" | "other"
       vendor_doc_type: "fssai" | "kyc_id_front" | "kyc_id_back" | "other"
       vendor_media_type: "profile" | "cover" | "gallery" | "intro_video"
@@ -1252,36 +2149,37 @@ export const Constants = {
   public: {
     Enums: {
       address_label: ["pg", "home", "office", "kitchen"],
-      billing_type: ["prepaid", "auto"],
+      bb_credit_status: ["available", "used", "expired", "void"],
+      bb_invoice_status: ["draft", "pending_payment", "paid", "failed", "void"],
+      bb_order_status: [
+        "scheduled",
+        "delivered",
+        "skipped_by_customer",
+        "skipped_by_vendor",
+        "failed_ops",
+        "customer_no_show",
+        "cancelled",
+      ],
+      bb_plan_period_type: ["weekly", "monthly"],
+      bb_pricing_mode: ["per_meal", "fixed"],
+      bb_subscription_status: ["active", "paused", "cancelled"],
+      bb_trial_status: ["scheduled", "active", "completed", "cancelled"],
+      credit_reason: [
+        "customer_skip",
+        "vendor_holiday",
+        "ops_failure",
+        "manual_adjustment",
+      ],
+      invoice_status: ["pending", "paid", "failed", "refunded"],
+      job_status: ["pending", "running", "success", "failed"],
       kyc_status: ["pending", "approved", "rejected"],
       meal_slot: ["breakfast", "lunch", "dinner"],
-      order_status: [
-        "scheduled",
-        "preparing",
-        "ready",
-        "picked",
-        "delivered",
-        "failed",
-        "skipped",
-        "cancelled",
-      ],
-      payment_status: [
-        "pending",
-        "success",
-        "failed",
-        "refunded",
-        "partially_refunded",
-      ],
+      period_type: ["weekly", "monthly"],
+      price_type: ["per_meal", "fixed"],
       rider_doc_type: ["driving_license", "aadhaar", "other"],
       rider_status: ["active", "off", "pending", "suspended"],
-      subscription_period: ["weekly", "biweekly", "monthly"],
-      subscription_status: [
-        "trial",
-        "active",
-        "paused",
-        "cancelled",
-        "expired",
-      ],
+      slot_type: ["breakfast", "lunch", "dinner"],
+      trial_status: ["scheduled", "active", "completed", "cancelled"],
       vehicle_type: ["bike", "ev_bike", "ev_truck", "other"],
       vendor_doc_type: ["fssai", "kyc_id_front", "kyc_id_back", "other"],
       vendor_media_type: ["profile", "cover", "gallery", "intro_video"],

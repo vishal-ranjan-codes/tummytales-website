@@ -125,18 +125,24 @@ export async function getCancelPreview(
     const ordersCount = orders?.length || 0
 
     // Get pricing from latest paid invoice
+    // First, get the invoice ID
+    const { data: latestInvoice, error: invoiceQueryError } = await supabase
+      .from('bb_invoices')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('status', 'paid')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (invoiceQueryError || !latestInvoice) {
+      return { success: false, error: 'No paid invoice found for pricing reference' }
+    }
+
     const { data: invoiceLines, error: invoiceError } = await supabase
       .from('bb_invoice_lines')
       .select('unit_price, subscription_id')
-      .in('invoice_id',
-        supabase
-          .from('bb_invoices')
-          .select('id')
-          .eq('group_id', groupId)
-          .eq('status', 'paid')
-          .order('created_at', { ascending: false })
-          .limit(1)
-      )
+      .eq('invoice_id', latestInvoice.id)
 
     let remainingMealsValue = 0
     if (invoiceLines && invoiceLines.length > 0) {

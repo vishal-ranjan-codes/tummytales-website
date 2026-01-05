@@ -62,6 +62,11 @@ export default function PaymentRetryDialog({
           return
         }
 
+        if (!result.data) {
+          toast.error('Failed to create payment order')
+          return
+        }
+        
         const options = {
           key: publicKeyId,
           amount: result.data.amount * 100, // Convert to paise

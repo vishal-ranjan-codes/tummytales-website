@@ -16,13 +16,17 @@ const inter = Inter({
   display: "swap",
 });
 
+import { getAuth } from '@/lib/auth/server'
+
 export const metadata: Metadata = getBaseMetadata()
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialAuth = await getAuth()
+
   return (
     <html lang="en" className='light'>
       <head>
@@ -30,12 +34,12 @@ export default function RootLayout({
         <StructuredData data={getWebsiteSchema()} />
       </head>
       <body className={`theme-fc-base theme-bg-color font-inter ${inter.variable}`}>
-        <AuthProvider>
-        <div className="site" id="page">
-          <HeaderServer/>
+        <AuthProvider initialAuth={initialAuth}>
+          <div className="site" id="page">
+            <HeaderServer initialAuth={initialAuth} />
             {children}
-          <FooterWrapper/>
-        </div>
+            <FooterWrapper />
+          </div>
         </AuthProvider>
         <Toaster />
       </body>

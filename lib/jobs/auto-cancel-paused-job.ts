@@ -184,12 +184,12 @@ export async function autoCancelPausedSubscriptions(): Promise<AutoCancelResult>
     }
 
     // Complete job
-    await completeJob(job.id, result)
+    await completeJob(job.id, result as unknown as Record<string, unknown>)
     await logJob({
       jobId: job.id,
       level: 'info',
       message: `Auto-cancel job completed: ${result.processed} processed, ${result.cancelled} cancelled, ${result.errors} errors`,
-      metadata: result,
+      metadata: result as unknown as Record<string, unknown>,
     })
 
     return result

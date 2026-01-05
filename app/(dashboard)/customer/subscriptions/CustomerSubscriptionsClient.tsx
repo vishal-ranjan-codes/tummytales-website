@@ -90,7 +90,7 @@ export default function CustomerSubscriptionsClient({
                     <p className="text-sm font-medium mb-2">Active Slots:</p>
                     <div className="flex gap-2 flex-wrap">
                       {group.subscriptions?.map((sub) => {
-                        const skipLimit = getSkipLimitForSlot(group.plan?.skip_limits, sub.slot)
+                        const skipLimit = getSkipLimitForSlot(group.plan?.skip_limits ?? null, sub.slot)
                         const skipsUsed = sub.credited_skips_used_in_cycle || 0
                         const remaining = calculateRemainingSkips(skipLimit, skipsUsed)
                         

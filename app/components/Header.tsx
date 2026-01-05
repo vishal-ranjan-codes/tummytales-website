@@ -68,19 +68,23 @@ function isHiddenPath(pathname: string): boolean {
 export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
   const pathname = usePathname()
   // Get client auth state for live updates (login/logout)
+  // authReady state to track if we've switched to client-side auth
+  const [authReady, setAuthReady] = useState(false)
   const { isAuthenticated: clientIsAuthenticated, isReady: authIsReady } = useAuth()
-  // Priority: Use client state if auth context is ready and has a value, otherwise use server state
-  // This ensures we show the correct state immediately from server, then update when client loads
-  // If client is ready and says authenticated, use that; if client is ready and says not authenticated, use that
-  // If client is not ready yet, use server state
-  const isAuthenticated = (authIsReady && typeof clientIsAuthenticated !== 'undefined') 
-    ? clientIsAuthenticated 
-    : initialAuth.isAuthenticated
+
+  // Use server state for hydration, switch to client state after hydration
+  const isAuthenticated = authReady ? clientIsAuthenticated : initialAuth.isAuthenticated
+
+  useEffect(() => {
+    if (authIsReady) {
+      setAuthReady(true)
+    }
+  }, [authIsReady])
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  // Initialize with defaults to avoid SSR issues with usePathname
-  const [isTransparent, setIsTransparent] = useState(false)
-  const [isFullWidth, setIsFullWidth] = useState(false)
-  const [isHidden, setIsHidden] = useState(false)
+  // Initialize with correct values to avoid SSR issues and hydration flickering
+  const [isTransparent, setIsTransparent] = useState(isTransparentPath(pathname || ""))
+  const [isFullWidth, setIsFullWidth] = useState(isFullWidthPath(pathname || ""))
+  const [isHidden, setIsHidden] = useState(isHiddenPath(pathname || ""))
   const [isClient, setIsClient] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -132,13 +136,12 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
   }
 
   return (
-    <header 
+    <header
       itemType="http://schema.org/WPHeader"
       itemScope
       id="masthead"
-      className={`site-header sticky top-0 z-50 transition-all duration-300 ${
-        isTransparent && !isScrolled ? "transparent-header dark border-transparent" : "border-b theme-border-color backdrop-blur-lg bg-white/90 dark:bg-[#1A0F08]/90"
-      }`}
+      className={`site-header sticky top-0 z-50 transition-all duration-300 ${isTransparent && !isScrolled ? "transparent-header dark border-transparent" : "border-b theme-border-color backdrop-blur-lg bg-white/90 dark:bg-[#1A0F08]/90"
+        }`}
     >
       <div className={`${isFullWidth ? 'px-4 md:px-6' : 'container'} md:py-4 py-3`}>
         <div className="flex items-center justify-between">
@@ -146,16 +149,16 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
           <HeaderLogo />
 
           {/* Desktop Navigation */}
-          <nav 
-            id="site-navigation" 
+          <nav
+            id="site-navigation"
             className="main-navigation hidden lg:block"
             role="navigation"
             aria-label="Main navigation"
           >
             <ul id="primary-menu" className="main-menu-list m-0 p-0 list-none flex flex-wrap gap-1">
               <li className={`menu-item flex justify-start items-center relative ${pathname === "/homechefs" ? "current-menu-item" : ""}`}>
-                <Link 
-                  href="/homechefs" 
+                <Link
+                  href="/homechefs"
                   className={`nav-menu-item ${pathname === "/homechefs" ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
                 >
                   Browse Chefs
@@ -164,7 +167,11 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
               <li className="menu-item flex justify-start items-center relative">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button type="button" className="nav-menu-item flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="nav-menu-item flex items-center gap-1"
+                      suppressHydrationWarning
+                    >
                       Join Us
                       <ChevronDown className="w-4 h-4" />
                     </button>
@@ -179,16 +186,16 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
                 </DropdownMenu>
               </li>
               <li className={`menu-item flex justify-start items-center relative ${pathname === "/about" ? "current-menu-item" : ""}`}>
-                <Link 
-                  href="/about" 
+                <Link
+                  href="/about"
                   className={`nav-menu-item ${pathname === "/about" ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
                 >
                   About
                 </Link>
               </li>
               <li className={`menu-item flex justify-start items-center relative ${pathname === "/contact" ? "current-menu-item" : ""}`}>
-                <Link 
-                  href="/contact" 
+                <Link
+                  href="/contact"
                   className={`nav-menu-item ${pathname === "/contact" ? "theme-text-primary-color-100 dark:text-white-opacity-90" : ""}`}
                 >
                   Contact
@@ -198,8 +205,8 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
           </nav>
 
           {/* Secondary Navigation - Desktop */}
-          <nav 
-            id="secondary-navigation" 
+          <nav
+            id="secondary-navigation"
             className="secondary-navigation hidden lg:flex gap-3 items-center"
             aria-label="User navigation"
           >
@@ -207,9 +214,9 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
               // Show login/signup when not authenticated
               <>
                 <Link href="/login">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="text-sm min-w-[80px]"
                     aria-label="Login to your account"
                   >
@@ -217,9 +224,9 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
                   </Button>
                 </Link>
                 <Link href="/signup/customer">
-                  <Button 
-                    variant="primary-dark-white" 
-                    size="sm" 
+                  <Button
+                    variant="primary-dark-white"
+                    size="sm"
                     className="text-sm min-w-[80px]"
                     aria-label="Sign up for BellyBox"
                   >
@@ -229,8 +236,8 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
               </>
             ) : (
               // Show account menu when authenticated
-              <AccountMenu 
-                variant="desktop" 
+              <AccountMenu
+                variant="desktop"
                 initialProfile={
                   initialAuth.isAuthenticated && initialAuth.profile ? {
                     full_name: initialAuth.profile.full_name,
@@ -251,9 +258,9 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
               // Show login/signup when not authenticated
               <>
                 <Link href="/login">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="text-sm"
                     aria-label="Login to your account"
                   >
@@ -261,9 +268,9 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
                   </Button>
                 </Link>
                 <Link href="/signup/customer">
-                  <Button 
-                    variant="primary-dark-white" 
-                    size="sm" 
+                  <Button
+                    variant="primary-dark-white"
+                    size="sm"
                     className="text-sm"
                     aria-label="Sign up for BellyBox"
                   >
@@ -273,8 +280,8 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
               </>
             ) : (
               // Show account menu when authenticated
-              <AccountMenu 
-                variant="mobile" 
+              <AccountMenu
+                variant="mobile"
                 initialProfile={
                   initialAuth.isAuthenticated && initialAuth.profile ? {
                     full_name: initialAuth.profile.full_name,
@@ -288,11 +295,11 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
               />
             )}
 
-            <button 
-              onClick={toggleMenu} 
+            <button
+              onClick={toggleMenu}
               className="theme-fc-base hover:theme-fc-heading transition-all duration-300 cursor-pointer p-2 -mr-2"
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-              
+
               aria-controls="mobile-menu"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -303,7 +310,7 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
 
       {/* Mobile Navigation */}
       {isClient && (
-        <div 
+        <div
           id="mobile-menu"
           className={`mobile-menu lg:hidden ${isMenuOpen ? 'block' : 'hidden'} absolute w-full theme-bg-color border-b theme-border-color shadow-lg`}
           role="navigation"
@@ -312,9 +319,9 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
           <nav className="main-navigation mobile p-6">
             <ul className="main-menu-list m-0 p-0 list-none flex flex-wrap gap-4 flex-col">
               <li className="menu-item">
-                <Link 
-                  href="/homechefs" 
-                  className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
+                <Link
+                  href="/homechefs"
+                  className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
                   onClick={closeMenu}
                 >
                   Browse Chefs
@@ -340,18 +347,18 @@ export default function Header({ initialAuth }: { initialAuth: InitialAuth }) {
                 </div>
               </li>
               <li className="menu-item">
-                <Link 
-                  href="/about" 
-                  className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
+                <Link
+                  href="/about"
+                  className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
                   onClick={closeMenu}
                 >
                   About
                 </Link>
               </li>
               <li className="menu-item">
-                <Link 
-                  href="/contact" 
-                  className="nav-menu-item text-base py-2 flex items-center min-h-[44px]" 
+                <Link
+                  href="/contact"
+                  className="nav-menu-item text-base py-2 flex items-center min-h-[44px]"
                   onClick={closeMenu}
                 >
                   Contact

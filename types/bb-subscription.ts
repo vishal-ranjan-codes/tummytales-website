@@ -160,6 +160,9 @@ export interface BBSubscriptionGroup {
   start_date: string // DATE format
   renewal_date: string // DATE format
   delivery_address_id: string
+  paused_from?: string | null // DATE format, when subscription was paused
+  cancelled_at?: string | null // TIMESTAMP, when subscription was cancelled
+  cancellation_reason?: string | null // Reason for cancellation
   created_at: string
   updated_at: string
 }
@@ -171,7 +174,7 @@ export interface BBSubscriptionGroupWithDetails extends BBSubscriptionGroup {
     display_name: string
     slug: string | null
   }
-  subscriptions?: BBSubscription[]
+  subscriptions?: BBSubscriptionWithDetails[]
 }
 
 // =====================================================
@@ -200,6 +203,7 @@ export interface BBSubscriptionWithDetails extends BBSubscription {
     display_name: string
     slug: string | null
   }
+  credits?: BBCredit[] // Credits attached to this subscription
 }
 
 // =====================================================

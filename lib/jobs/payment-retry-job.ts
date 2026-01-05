@@ -208,12 +208,12 @@ export async function executePaymentRetryJob(): Promise<PaymentRetryJobResult> {
       nextBatchNumber: hasMore ? currentBatch : undefined,
     }
 
-    await completeJob(job.id, result)
+    await completeJob(job.id, result as unknown as Record<string, unknown>)
     await logJob({
       jobId: job.id,
       level: 'info',
       message: `Payment retry job completed: ${processed} processed, ${retried} retried, ${paused} paused, ${errors} errors`,
-      metadata: result,
+      metadata: result as unknown as Record<string, unknown>,
     })
 
     return result

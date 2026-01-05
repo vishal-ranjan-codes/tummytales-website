@@ -28,14 +28,27 @@ interface AuthContextType {
   isAuthenticated: boolean
 }
 
+import { InitialAuth } from '@/lib/auth/types'
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
+export function AuthProvider({
+  children,
+  initialAuth = { isAuthenticated: false }
+}: {
+  children: React.ReactNode
+  initialAuth?: InitialAuth
+}) {
+  const [user, setUser] = useState<User | null>(
+    initialAuth.isAuthenticated ? initialAuth.user as unknown as User : null
+  )
+  const [profile, setProfile] = useState<UserProfile | null>(
+    initialAuth.isAuthenticated ? initialAuth.profile as unknown as UserProfile : null
+  )
+  // Seed profileFetchAttempted if we have initial profile
+  const [profileFetchAttempted, setProfileFetchAttempted] = useState(initialAuth.isAuthenticated)
+  const [loading, setLoading] = useState(!initialAuth.isAuthenticated)
   const [isInitialized, setIsInitialized] = useState(false)
-  const [profileFetchAttempted, setProfileFetchAttempted] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
   // Memoize supabase client to prevent recreation on every render
   const supabase = useMemo(() => createClient(), [])
@@ -44,21 +57,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const roles = useMemo(() => profile?.roles ?? [], [profile?.roles])
   const currentRole = profile?.last_used_role || profile?.default_role || roles[0] || null
   const isAuthenticated = !!user
-  
+
   // isReady: True when loading is false AND initialization is complete
   // For authenticated users, we wait for profile fetch to be attempted (even if it fails)
   // This prevents infinite loading when profile fetch fails
   const isReady = useMemo(() => {
+    // We are ready if we have a user and profile from initialAuth
+    if (initialAuth.isAuthenticated && (profile || profileFetchAttempted)) return true
+
     if (loading) return false
     if (!isInitialized) return false
-    
+
     // If no user, we're ready
     if (user === null) return true
-    
+
     // If user exists, we're ready only after profile fetch has been attempted
-    // (whether it succeeded or failed)
     return profileFetchAttempted
-  }, [loading, isInitialized, user, profileFetchAttempted])
+  }, [loading, isInitialized, user, profileFetchAttempted, initialAuth.isAuthenticated, profile])
 
   // Fetch user profile
   const fetchProfile = useCallback(async (userId: string) => {
@@ -123,11 +138,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setIsSigningOut(true)
-    
+
     try {
       // Check if there's a session before attempting to sign out
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (session) {
         // Only call signOut if there's an active session
         const { error } = await supabase.auth.signOut()
@@ -141,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       }
-      
+
       // Always clear local state for instant UI update, even if signOut failed
       // This ensures the UI updates immediately regardless of server response
       setUser(null)
@@ -194,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        
+
         if (mounted) {
           setUser(session?.user ?? null)
           if (session?.user) {
@@ -219,21 +234,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
+    // Safety timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('Auth initialization timed out, forcing ready state')
+        setLoading(false)
+        setIsInitialized(true)
+        setProfileFetchAttempted(true)
+      }
+    }, 5000)
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
 
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-        } else {
-          setProfile(null)
-          // No user, so no profile fetch needed
-          setProfileFetchAttempted(true)
+        console.log(`Auth event: ${event}`)
+
+        // Only trigger profile fetch if session user changed or initial call
+        if (session?.user?.id !== user?.id) {
+          setUser(session?.user ?? null)
+          if (session?.user) {
+            await fetchProfile(session.user.id)
+          } else {
+            setProfile(null)
+            setProfileFetchAttempted(true)
+          }
         }
-        
+
         setLoading(false)
         setIsInitialized(true)
       }
@@ -241,9 +269,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false
+      clearTimeout(timeout)
       subscription.unsubscribe()
     }
-  }, [supabase, fetchProfile])
+  }, [supabase, fetchProfile, user?.id, loading])
 
   // Subscribe to profile changes for real-time updates
   useEffect(() => {

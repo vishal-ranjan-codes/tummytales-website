@@ -188,12 +188,12 @@ export async function executeOrderGenerationJob(): Promise<OrderGenerationJobRes
       nextBatchNumber: hasMore ? currentBatch : undefined,
     }
 
-    await completeJob(job.id, result)
+    await completeJob(job.id, result as unknown as Record<string, unknown>)
     await logJob({
       jobId: job.id,
       level: 'info',
       message: `Order generation job completed: ${processed} processed, ${ordersCreated} orders created, ${skipped} skipped, ${errors} errors`,
-      metadata: result,
+      metadata: result as unknown as Record<string, unknown>,
     })
 
     return result

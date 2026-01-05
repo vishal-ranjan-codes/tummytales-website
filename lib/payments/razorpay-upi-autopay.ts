@@ -123,6 +123,8 @@ export async function createUPIAutopayMandate(
         internal_customer_id: customerId,
       },
       // UPI Autopay specific parameters
+      // Note: 'method' property may not be in type definition but is required by Razorpay API
+      // @ts-expect-error - Razorpay API accepts 'method' parameter for UPI autopay
       method: 'upi',
     })
 
@@ -168,7 +170,8 @@ export async function chargeViaMandate(
     const razorpay = initializeRazorpay()
 
     // Charge via mandate using payments API
-    const payment = await razorpay.payments.create({
+    // Note: Razorpay payments API uses 'capture' or 'create' method depending on version
+    const payment = await (razorpay.payments as any).create({
       amount: Math.round(amount * 100), // Convert to paise
       currency,
       order_id: orderId,
