@@ -83,7 +83,7 @@ export default function AdminZonesClient({ initialData }: AdminZonesClientProps)
     // Count vendors per zone
     const vendorCounts = new Map<string, number>()
     if (vendorsData) {
-      vendorsData.forEach(vendor => {
+      vendorsData.forEach((vendor: { zone_id: string | null }) => {
         if (vendor.zone_id) {
           vendorCounts.set(vendor.zone_id, (vendorCounts.get(vendor.zone_id) || 0) + 1)
         }
@@ -91,7 +91,7 @@ export default function AdminZonesClient({ initialData }: AdminZonesClientProps)
     }
 
     // Transform zones with vendor counts
-    const transformedZones = (zonesData || []).map(zone => ({
+    const transformedZones = (zonesData || []).map((zone: any) => ({
       id: zone.id,
       name: zone.name,
       polygon: zone.polygon,

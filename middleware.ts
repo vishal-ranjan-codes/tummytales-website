@@ -145,7 +145,7 @@ export async function middleware(request: NextRequest) {
     // RBAC: Admin dashboard access (internal roles only)
     if (requestedRole === 'admin') {
       const internalRoles = ['admin', 'super_admin', 'product_manager', 'developer', 'operations'];
-      const hasInternalRole = profile.roles.some(r => internalRoles.includes(r)) || profile.is_super_admin;
+      const hasInternalRole = profile.roles.some((r: string) => internalRoles.includes(r)) || profile.is_super_admin;
 
       if (!hasInternalRole) {
         return NextResponse.rewrite(new URL('/404', request.url));

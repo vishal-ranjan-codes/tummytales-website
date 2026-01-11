@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserRole, getRoleDisplayName, getRoleColor, getDashboardPath } from '@/lib/auth/role-types'
 import { updateLastUsedRole } from '@/lib/actions/auth-actions'
-import { Users, Store, Bike, Shield } from 'lucide-react'
+import { Users, Store, Bike, Shield, Settings, Code, Briefcase, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface RoleSelectorProps {
@@ -22,6 +22,10 @@ const roleIcons: Record<UserRole, React.ElementType> = {
   vendor: Store,
   rider: Bike,
   admin: Shield,
+  super_admin: Shield,
+  product_manager: Briefcase,
+  developer: Code,
+  operations: Wrench,
 }
 
 export default function RoleSelector({ roles, onSelect }: RoleSelectorProps) {

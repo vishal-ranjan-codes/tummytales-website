@@ -74,7 +74,7 @@ export default function DevHubClient({ initialTree, initialProposals }: DevHubCl
 
     async function refreshData() {
         const treeResult = await getDocsTreeAction();
-        if (treeResult.success) setTree(treeResult.data);
+        if (treeResult.success && treeResult.data) setTree(treeResult.data);
 
         // In a real app, you'd fetch proposals here too
         // For now, relies on server component prop or manual refresh

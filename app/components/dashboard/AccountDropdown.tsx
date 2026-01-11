@@ -195,6 +195,18 @@ export default function AccountDropdown() {
             admin: [
               { label: 'Admin Panel', icon: Users, href: '/admin' },
             ],
+            super_admin: [
+              { label: 'Admin Panel', icon: Users, href: '/admin' },
+            ],
+            product_manager: [
+              { label: 'Admin Panel', icon: Users, href: '/admin' },
+            ],
+            developer: [
+              { label: 'Admin Panel', icon: Users, href: '/admin' },
+            ],
+            operations: [
+              { label: 'Admin Panel', icon: Users, href: '/admin' },
+            ],
           }
 
           const items = roleSpecificItems[currentRole]

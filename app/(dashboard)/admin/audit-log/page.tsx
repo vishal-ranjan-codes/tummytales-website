@@ -53,7 +53,7 @@ export default function AuditLogPage() {
                 toast.error('Failed to load audit logs');
                 console.error(error);
             } else {
-                const logsWithEmail = (data || []).map(log => ({
+                const logsWithEmail = (data || []).map((log: any) => ({
                     ...log,
                     actor_email: (log.profiles as any)?.email || 'System',
                 }));

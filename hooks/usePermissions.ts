@@ -64,6 +64,12 @@ export function usePermissions(): UsePermissionsReturn {
                     return;
                 }
 
+                if (!profile) {
+                    setPermissions(new Set());
+                    setPermsLoading(false);
+                    return;
+                }
+
                 const userRoles = (profile.roles as string[]) || [(profile.role as string) || 'customer'];
 
                 const { data: perms, error } = await supabase
@@ -75,7 +81,7 @@ export function usePermissions(): UsePermissionsReturn {
                     console.error('usePermissions: Error fetching role permissions', error);
                 }
 
-                setPermissions(new Set(perms?.map(p => p.permission) || []));
+                setPermissions(new Set(perms?.map((p: any) => p.permission) || []));
             } catch (err) {
                 console.error('usePermissions: Unexpected fetch error', err);
             } finally {

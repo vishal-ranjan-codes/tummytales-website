@@ -4,7 +4,7 @@
  */
 
 import { UserRole, getRoleDisplayName, getRoleColor } from '@/lib/auth/role-types'
-import { Users, Store, Bike, Shield } from 'lucide-react'
+import { Users, Store, Bike, Shield, Code, Briefcase, Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface RoleBadgeProps {
@@ -18,6 +18,10 @@ const roleIcons: Record<UserRole, React.ElementType> = {
   vendor: Store,
   rider: Bike,
   admin: Shield,
+  super_admin: Shield,
+  product_manager: Briefcase,
+  developer: Code,
+  operations: Wrench,
 }
 
 export default function RoleBadge({ role, showIcon = false, className }: RoleBadgeProps) {

@@ -246,7 +246,7 @@ export function AuthProvider({
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: string, session: any) => {
         if (!mounted) return
 
         console.log(`Auth event: ${event}`)
@@ -288,7 +288,7 @@ export function AuthProvider({
           table: 'profiles',
           filter: `id=eq.${user.id}`,
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Profile updated:', payload)
           setProfile(payload.new as UserProfile)
         }

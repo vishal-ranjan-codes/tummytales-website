@@ -15,7 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { Settings, LogOut, LayoutDashboard, Users, Store, Bike, Shield, Check, Loader2, ShoppingBag, ChefHat, Truck } from 'lucide-react'
+import { Settings, LogOut, LayoutDashboard, Users, Store, Bike, Shield, Check, Loader2, ShoppingBag, ChefHat, Truck, Code, Briefcase, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
@@ -25,6 +25,10 @@ const roleIcons: Record<UserRole, React.ElementType> = {
   vendor: Store,
   rider: Bike,
   admin: Shield,
+  super_admin: Shield,
+  product_manager: Briefcase,
+  developer: Code,
+  operations: Wrench,
 }
 
 interface MobileAccountMenuProps {
@@ -237,6 +241,18 @@ export default function MobileAccountMenu({ open, onOpenChange }: MobileAccountM
                     { label: 'Orders', icon: ShoppingBag, href: '/rider/orders' },
                   ],
                   admin: [
+                    { label: 'Admin Panel', icon: Shield, href: '/admin' },
+                  ],
+                  super_admin: [
+                    { label: 'Admin Panel', icon: Shield, href: '/admin' },
+                  ],
+                  product_manager: [
+                    { label: 'Admin Panel', icon: Shield, href: '/admin' },
+                  ],
+                  developer: [
+                    { label: 'Admin Panel', icon: Shield, href: '/admin' },
+                  ],
+                  operations: [
                     { label: 'Admin Panel', icon: Shield, href: '/admin' },
                   ],
                 }

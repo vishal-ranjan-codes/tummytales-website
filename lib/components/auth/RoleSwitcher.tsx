@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ChevronDown, Users, Store, Bike, Shield, Check, Loader2 } from 'lucide-react'
+import { ChevronDown, Users, Store, Bike, Shield, Check, Loader2, Code, Briefcase, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 
 const roleIcons: Record<UserRole, React.ElementType> = {
@@ -26,6 +26,10 @@ const roleIcons: Record<UserRole, React.ElementType> = {
   vendor: Store,
   rider: Bike,
   admin: Shield,
+  super_admin: Shield,
+  product_manager: Briefcase,
+  developer: Code,
+  operations: Wrench,
 }
 
 export default function RoleSwitcher() {
