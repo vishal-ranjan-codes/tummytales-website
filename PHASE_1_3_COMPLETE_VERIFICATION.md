@@ -153,13 +153,10 @@ All three phases of the BellyBox subscription system have been successfully impl
   - `getJobStatistics()` - Get job statistics
 
 ### Cron Configuration
-- ✅ `vercel.json` updated with all cron schedules
+- ✅ `vercel.json` updated with all cron schedules (3 jobs total)
   - Renewal: Daily at 00:01 UTC (checks day internally)
   - Payment Retry: Every 6 hours
-  - Order Generation: Daily at 02:00 UTC
-  - Credit Expiry: Daily at 03:00 UTC
-  - Trial Completion: Daily at 04:00 UTC
-  - Auto-Cancel Paused: Daily at 05:00 UTC
+  - Daily Maintenance: Daily at 02:00 UTC (consolidates order generation, credit expiry, trial completion, and auto-cancel paused)
 
 ---
 

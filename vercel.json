@@ -9,20 +9,8 @@
       "schedule": "0 */6 * * *"
     },
     {
-      "path": "/api/cron/generate-orders",
+      "path": "/api/cron/daily-maintenance",
       "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/expire-credits",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/complete-trials",
-      "schedule": "0 4 * * *"
-    },
-    {
-      "path": "/api/cron/auto-cancel-paused",
-      "schedule": "0 5 * * *"
     }
   ]
 }

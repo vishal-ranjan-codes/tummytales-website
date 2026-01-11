@@ -156,9 +156,31 @@ curl -X POST https://your-domain.com/api/cron/payment-retry \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
-### Test Credit Expiry Job
+### Test Daily Maintenance Job (Consolidated)
 ```bash
+curl -X POST https://your-domain.com/api/cron/daily-maintenance \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+```
+
+**Note:** The daily maintenance job runs 4 tasks sequentially:
+1. Order generation (backup)
+2. Credit expiry
+3. Trial completion
+4. Auto-cancel paused subscriptions
+
+Individual endpoints still exist for manual testing/debugging:
+```bash
+# Test individual tasks (for debugging only)
+curl -X POST https://your-domain.com/api/cron/generate-orders \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+
 curl -X POST https://your-domain.com/api/cron/expire-credits \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+
+curl -X POST https://your-domain.com/api/cron/complete-trials \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+
+curl -X POST https://your-domain.com/api/cron/auto-cancel-paused \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
